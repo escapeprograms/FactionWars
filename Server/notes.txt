@@ -1,0 +1,47 @@
+Classes and types
+Lobby (type):
+- manages information about sockets, teams, factions pre-game
+Game:
+- manages information about sockets, teams, factions
+- tracks data about turns, Players, the battlefield of tiles
+- turn timer
+Tile:
+- terrain type
+- covered by building (reference to building, undefined=false)
+
+Player:
+- socket id
+- faction and team
+- energy and money
+- building ownership (array)
+- unit ownership (array)
+- card ownership
+Card
+- OperationCard, UnitCard, BuildingCard subclasses
+Unit
+- HP, SPD, ATK, RAN (as base stats too)
+- passive abilities
+- active abilities
+type UnitType = {
+    attack: ...
+    maxHealth, speed, 
+    attributes: string[]
+}
+type Unit = {
+    type: UnitType
+}
+Building
+- similar to unit
+
+Game Flow
+Start game / Join Game > Choose factions & teams > Game starts automatically
+
+events:
+start game
+join game -
+play card (subcases: operation, building a building, deploying a unit)
+move unit
+attack w/ unit
+activate unit
+end turn
+chat msg (later)

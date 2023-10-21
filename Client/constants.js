@@ -1,0 +1,1 @@
+const MAX_NAME_SIZE = 50;
