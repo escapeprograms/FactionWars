@@ -24,6 +24,7 @@ io.on("connection", (socket: Socket) => {
         team: 0
       };
       const lobby = createLobby(user);
+      //TODO: Add user to socketTable
       /*socketTable[socket.id] = {
         state:SocketState.Lobby,
         clientId:,
