@@ -1,0 +1,1 @@
+const socketTable:{[id: string]: SocketInfo} = {}
