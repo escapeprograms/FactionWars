@@ -10,8 +10,8 @@ function generateLobbyId(): string {
     return id;
 }
 
-// create lobby and return id
-function createLobby(user: User): string {
+// create lobby and return it
+function createLobby(user: User): Lobby {
     const lobbyId = generateLobbyId();
     const lobby = {
         users: [user],
@@ -19,7 +19,7 @@ function createLobby(user: User): string {
         started: false
     };
     lobbyTable[lobbyId] = lobby;
-    return lobbyId;
+    return lobby;
 }
 
 enum LobbyJoinError {
@@ -29,17 +29,32 @@ enum LobbyJoinError {
     GameStarted = "Game already started"
 }
 
+
 // Add user to lobby if able
-// on success, return user object who joined
+// on success, return lobby that was joined
 // on failure, return error enum
 // We are assuming no race conditions here; if it breaks, then we whip out the semaphore thingies
-function joinLobby(user: User, id: string): User | LobbyJoinError {
-    if (!/^[A-Z]{4}$/.test(id)) { return LobbyJoinError.InvalidId; } // Checks that id is exactly 4 uppercase letters
+function joinLobby(user: User, id: string): Result<Lobby, LobbyJoinError> {
+    if (!/^[A-Z]{4}$/.test(id)) { return failure(LobbyJoinError.InvalidId); } // Checks that id is exactly 4 uppercase letters
     const lobby = lobbyTable[id];
-    if (lobby === undefined) { return LobbyJoinError.LobbyDoesntExist; }
-    if (lobby.started) { return LobbyJoinError.GameStarted; }
-    if (lobby.users.length >= 4) { return LobbyJoinError.LobbyFull; }
+    if (lobby === undefined) { return failure(LobbyJoinError.LobbyDoesntExist); }
+    if (lobby.started) { return failure(LobbyJoinError.GameStarted); }
+    if (lobby.users.length >= 4) { return failure(LobbyJoinError.LobbyFull); }
     // id is valid, join the game
     lobby.users.push(user);
-    return user;
+    return success(lobby);
+}
+
+// Converts socketIds from users the given lobby into clientIds and returns a new lobby object
+function filterLobby(lobby: Lobby): Lobby {
+    return {
+        users: lobby.users.map(user => { return {
+            id: socketTable[user.id].clientId,
+            name: user.name,
+            faction: user.faction,
+            team: user.team
+        }}),
+        id: lobby.id,
+        started: lobby.started
+    };
 }

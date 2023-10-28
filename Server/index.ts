@@ -1,4 +1,5 @@
 import { Socket } from "socket.io";
+import { isValidName } from "../Client/functions.js";
 
 const http = require("http");
 const express = require("express");
@@ -14,24 +15,68 @@ const server = http.createServer(app);
 const io = socketio(server);
 
 io.on("connection", (socket: Socket) => {
-    socket.emit("message","You are connected!"); // send a msg to client
-    socket.on("card", (data) => {
-
-    }); // when the client sends an event to u
-    socket.on("newUnit", (data) => {
-
-    });
-    socket.on("test",(data:string) => {
-        console.log("string");
-    })
+  socket.on("create-game", (name) => {
+    if (isValidName(name)) {
+      const user: User = {
+        id: socket.id,
+        name: name,
+        faction: "T" as Faction,
+        team: 0
+      };
+      const lobby = createLobby(user);
+      /*socketTable[socket.id] = {
+        state:SocketState.Lobby,
+        clientId:,
+        info:
+      }*/
+      socket.join(lobby.id);
+      socket.emit("joined-lobby", filterLobby(lobby));
+      // Not emitting new-join because there shouldn't be anyone else in the lobby
+    }
+    else {
+      socket.emit("create-error", "invalid-name");
+    }
+  });
+  socket.on("join-game", (name, lobbyId) => {
+    if (isValidName(name)) {
+      const user: User = {
+        id: socket.id,
+        name: name,
+        faction: "T",
+        team: 0
+      }
+      const result = joinLobby(user, lobbyId);
+      if (result.isSuccessful) {
+        // TODO: Add user to socketTable
+        const lobby = result.value as Lobby;
+        socket.join(lobby.id);
+        socket.emit("joined-lobby", filterLobby(lobby))
+        socket.to(lobbyId).emit("new-join", name);
+      } else {
+        socket.emit("join-error", result.value);
+      }
+    } else {
+      socket.emit("join-error", "invalid-name");
+    }
+  });
+  socket.on("change-team", () => {
+    const sock = socketTable[socket.id];
+    if (!sock || sock.state !== SocketState.Lobby) {
+      socket.emit("team-change-error", "invalid-state")
+    } else {
+      const {user, lobby} = sock.info as { user: User, lobby: Lobby };
+      user.team = 1 - user.team;
+      socket.emit("team-change-success", user.team);
+      socket.to(lobby.id).emit("team-change", { clientId: sock.clientId, team: user.team });
+    }
+  });
 })
 
-//server stuff
-server.on("error",(e: string)=>{
-    console.log("Server error: "+ e);
-    server.close();
-  });
+server.on("error", (e: string) => {
+  console.log("Server error: " + e);
+  server.close();
+});
   
-  server.listen(3000, ()=>{
-    console.log("HI, starting server...");
-  });
+server.listen(3000, () => {
+  console.log("HI, starting server...");
+});
