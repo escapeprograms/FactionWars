@@ -4,3 +4,4 @@ Things to Do, Amongst Others
    Edit creation of users after we figure that out.
  - Figure out how we want to create clientIds
  - Add users to socketTable approriately in index.ts
+ - Test the new code

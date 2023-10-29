@@ -24,12 +24,11 @@ io.on("connection", (socket: Socket) => {
         team: 0
       };
       const lobby = createLobby(user);
-      //TODO: Add user to socketTable
-      /*socketTable[socket.id] = {
+      socketTable[socket.id] = {
         state:SocketState.Lobby,
-        clientId:,
-        info:
-      }*/
+        clientId: generateClientId(),
+        info: {user: user, lobby: lobby}
+      }
       socket.join(lobby.id);
       socket.emit("joined-lobby", filterLobby(lobby));
       // Not emitting new-join because there shouldn't be anyone else in the lobby
@@ -48,8 +47,12 @@ io.on("connection", (socket: Socket) => {
       }
       const result = joinLobby(user, lobbyId);
       if (result.isSuccessful) {
-        // TODO: Add user to socketTable
         const lobby = result.value as Lobby;
+        socketTable[socket.id] = {
+          state: SocketState.Lobby,
+          clientId: generateClientId(),
+          info: {user: user, lobby: lobby}
+        }
         socket.join(lobby.id);
         socket.emit("joined-lobby", filterLobby(lobby))
         socket.to(lobbyId).emit("new-join", name);
