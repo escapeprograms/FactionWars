@@ -74,7 +74,7 @@ io.on("connection", (socket: Socket) => {
       socket.to(lobby.id).emit("team-change", { clientId: sock.clientId, team: user.team });
     }
   });
-  socket.on("change-faction", (faction)=> {
+  socket.on("change-faction", (faction) => {
     const sock = socketTable[socket.id];
     if (!sock || sock.state !== SocketState.Lobby) {
       socket.emit("faction-change-error", "invalid-state")
@@ -82,16 +82,22 @@ io.on("connection", (socket: Socket) => {
         socket.emit("faction-change-error", "invalid-faction")
     } else {
         const {user, lobby} = sock.info as { user: User, lobby: Lobby };
+        /*
         // Check that the faction is not the same as the current faction
         if (faction !== user.faction) {
           user.faction = faction;
-          socket.emit("faction-change_success", faction);
-          socket.to(lobby.id).emit("faction-change", { clientId: sock.clientId, faction: user.faction })
+          socket.emit("faction-change-success", faction);
+          socket.to(lobby.id).emit("faction-change", { clientId: sock.clientId, faction: user.faction });
         } else {
           socket.emit("faction-change-error", "same-faction");
         }
+        */
+        // Allow change to same faction
+        user.faction = faction;
+        socket.emit("faction-change-success", faction);
+        socket.to(lobby.id).emit("faction-change", { clientId: sock.clientId, faction: user.faction });
     }
-    });
+  });
 })
 
 server.on("error", (e: string) => {
