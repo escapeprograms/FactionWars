@@ -79,3 +79,7 @@ class Composite {
     }
 }
 
+function background(color = "lightgray") {
+    return new Rect(0, 0, canvas.width, canvas.height, color);
+}
+
