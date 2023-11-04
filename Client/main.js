@@ -52,3 +52,30 @@ class ClickBox {
     }
 }
 
+class Composite {
+    constructor(elems) {
+        this.elems = elems;
+    }
+
+    draw() {
+        for (const elem of this.elems) {
+            if ("draw" in elem) {
+                elem.draw();
+            }
+        }
+    }
+
+    isInClickZone(event) {
+        return this.elems.some(elem => "isInClickZone" in elem && elem.isInClickZone(event));
+    }
+
+    onClick(event) {
+        for (const elem of this.elems) {
+            if ("isInClickZone" in elem && "onClick" in elem && elem.isInClickZone(event)) {
+                elem.onClick(event);
+                return;
+            }
+        }
+    }
+}
+
