@@ -14,7 +14,7 @@ enum SocketState {
 type SocketInfo = {
     state: SocketState,
     clientId: string,
-    info: { user: User, lobby: Lobby } | { player: Player, game: Game }
+    info: undefined | { user: User, lobby: Lobby } | { player: Player, game: Game }
 }
 
 type User = {

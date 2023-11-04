@@ -1,9 +1,9 @@
 import { Socket } from "socket.io";
-import { isValidName } from "../Client/functions.js";
 
 const http = require("http");
 const express = require("express");
 const socketio = require("socket.io");
+const isValidName = require("../Client/functions.js");
 
 const clientPath = __dirname + "/../../Client";
 console.log("Serving static from " + clientPath);
@@ -15,6 +15,21 @@ const server = http.createServer(app);
 const io = socketio(server);
 
 io.on("connection", (socket: Socket) => {
+  // Add socket to socketTable
+  if (!socket.recovered && (socketTable[socket.id] !== undefined)) {
+    // Duplicate socket id
+    socket.emit("dup-id");
+    socket.disconnect(true);
+  } else {
+    if (!socketTable[socket.id]) {
+      // Add socket to the table
+      socketTable[socket.id] = {
+        state:SocketState.Menu,
+        clientId: generateClientId(),
+        info: undefined
+      }
+    } // else, should be a recovered user already in the table
+  }
   socket.on("create-game", (name) => {
     if (isValidName(name)) {
       const user: User = {
@@ -24,11 +39,8 @@ io.on("connection", (socket: Socket) => {
         team: 0
       };
       const lobby = createLobby(user);
-      socketTable[socket.id] = {
-        state:SocketState.Lobby,
-        clientId: generateClientId(),
-        info: {user: user, lobby: lobby}
-      }
+      socketTable[socket.id].state = SocketState.Lobby;
+      socketTable[socket.id].info = {user: user, lobby: lobby};
       socket.join(lobby.id);
       socket.emit("joined-lobby", filterLobby(lobby));
       // Not emitting new-join because there shouldn't be anyone else in the lobby
@@ -48,11 +60,8 @@ io.on("connection", (socket: Socket) => {
       const result = joinLobby(user, lobbyId);
       if (result.isSuccessful) {
         const lobby = result.value as Lobby;
-        socketTable[socket.id] = {
-          state: SocketState.Lobby,
-          clientId: generateClientId(),
-          info: {user: user, lobby: lobby}
-        }
+        socketTable[socket.id].state = SocketState.Lobby;
+        socketTable[socket.id].info = {user: user, lobby: lobby};
         socket.join(lobby.id);
         socket.emit("joined-lobby", filterLobby(lobby))
         socket.to(lobbyId).emit("new-join", name);
