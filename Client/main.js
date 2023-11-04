@@ -37,3 +37,18 @@ class Text {
     }
 }
 
+class ClickBox {
+    constructor(x, y, width, height, onClick) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.onClick = onClick;
+    }
+
+    isInClickZone(event) {
+        return this.x <= event.offsetX && event.offsetX <= this.x + this.width &&
+               this.y <= event.offsetY && event.offsetY <= this.y + this.height;
+    }
+}
+
