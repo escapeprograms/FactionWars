@@ -83,3 +83,13 @@ function background(color = "lightgray") {
     return new Rect(0, 0, canvas.width, canvas.height, color);
 }
 
+function button(x, y, width, height, text, onClick) {
+    const centerX = x + width / 2;
+    const centerY = y + height / 2;
+    return new Composite([
+        new Rect(x, y, width, height),
+        new Text(centerX, centerY, text),
+        new ClickBox(x, y, width, height, onClick)
+    ]);
+}
+
