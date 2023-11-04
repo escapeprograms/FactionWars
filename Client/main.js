@@ -93,3 +93,17 @@ function button(x, y, width, height, text, onClick) {
     ]);
 }
 
+const screen = new Composite([
+    background(),
+    button(350, 150, 200, 50, "one", () => console.log("one")),
+    button(350, 350, 200, 50, "two", () => console.log("two")),
+]);
+
+canvas.addEventListener("click", event => {
+    if (screen.isInClickZone(event)) {
+        screen.onClick(event);
+    }
+});
+
+screen.draw();
+
