@@ -1,9 +1,9 @@
 import { Socket } from "socket.io";
-import { isValidName } from "../Client/functions.js";
 
 const http = require("http");
 const express = require("express");
 const socketio = require("socket.io");
+const isValidName = require("../Client/functions.js");
 
 const clientPath = __dirname + "/../../Client";
 console.log("Serving static from " + clientPath);
