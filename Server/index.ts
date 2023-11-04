@@ -24,12 +24,30 @@ io.on("connection", (socket: Socket) => {
     if (!socketTable[socket.id]) {
       // Add socket to the table
       socketTable[socket.id] = {
-        state:SocketState.Menu,
+        state: SocketState.Menu,
         clientId: generateClientId(),
         info: undefined
       }
     } // else, should be a recovered user already in the table
   }
+  socket.on("disconnect", (reason)=> {
+    // For now, we don't care about the reason
+    const sock = socketTable[socket.id];
+    if (sock) {
+      // if (sock.state === SocketState.Menu) // Nothing to do here
+      if (sock.state === SocketState.Lobby) {
+        // Remove player from lobby
+        const {user, lobby} = sock.info as { user: User, lobby: Lobby };
+        lobby.users = lobby.users.filter(x=>x.id !== socket.id);
+        socket.to(lobby.id).emit("player-left-lobby", sock.clientId);
+      } else if (sock.state === SocketState.Game) {
+        const {player, game} = sock.info as {game: Game, player: Player};
+        // Do other stuff here as appropriate
+        // emit "player-left-game", sock.clientId
+      } // Else, well, something's weird
+      delete socketTable[socket.id];
+    } // Else, socket not in table, whatever
+  });
   socket.on("create-game", (name) => {
     if (isValidName(name)) {
       const user: User = {
@@ -64,7 +82,7 @@ io.on("connection", (socket: Socket) => {
         socketTable[socket.id].info = {user: user, lobby: lobby};
         socket.join(lobby.id);
         socket.emit("joined-lobby", filterLobby(lobby))
-        socket.to(lobbyId).emit("new-join", name);
+        socket.to(lobbyId).emit("new-join", {name:name, clientId:socketTable[socket.id].clientId});
       } else {
         socket.emit("join-error", result.value);
       }

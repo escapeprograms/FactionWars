@@ -2,4 +2,5 @@ Things to Do, Amongst Others
 
  - Figure out how to identify sockets. Socket.id is ephemeral, so we shouldn't really use that.
    Edit creation of users after we figure that out.
+ - Add game logic and apply proper changes to "disconnect" event
  - Test the new code
