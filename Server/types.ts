@@ -48,3 +48,9 @@ function failure<T, U>(value: U): Result<T, U> {
         value: value
     }
 }
+
+enum CardType {
+    Unit = "U",
+    Building = "B",
+    Operation = "O"
+}
