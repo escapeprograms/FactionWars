@@ -80,15 +80,13 @@ class Tile {
 
 class UnitStats {
     // Contains the stats of a unit
-    private maxHealth: number;
-    private health: number; // Current health
+    public maxHealth: number;
     private damage: number; // Attack damage
     private speed: number;
     private range: number; // 1 = melee
     private attributes: string[]; // Could potentially make a new type or enum for this
     constructor(maxHealth: number, damage: number, speed: number, range: number, ...attributes: string[]) {
         this.maxHealth = maxHealth;
-        this.health = maxHealth; // We assume units start at full health
         this.damage = damage;
         this.speed = speed;
         this.range = range;
@@ -102,17 +100,18 @@ class Unit {
     private tile: Tile;
     private stats: UnitStats;
     private owner: Player;
+    private health: number; // Current health
     // Add team and/or faction property?
     constructor(tile: Tile, stats: UnitStats, player: Player) {
         this.tile = tile;
         this.stats = stats;
         this.owner = player;
+        this.health = stats.maxHealth;
     }
 }
 
 class BuildingStats {
-    private maxHealth: number;
-    private health: number; // Current health
+    public maxHealth: number;
     private damage: number; // Attack damage, 0 for doesn't attack?
     private range: number; // 0 for doesn't attack normally?
     private upkeep: number; // amount of energy required for upkeep
@@ -120,7 +119,6 @@ class BuildingStats {
     // Add attributes property?
     constructor(maxHealth: number, damage: number, range: number, upkeep: number) {
         this.maxHealth = maxHealth;
-        this.health = maxHealth; // We assume buildings start at full health
         this.damage = damage;
         this.range = range;
         this.upkeep = upkeep;
@@ -131,10 +129,12 @@ class Building {
     private tile: Tile;
     private stats: BuildingStats;
     private owner: Player;
+    private health: number; // Current health
     constructor(tile: Tile, stats: BuildingStats, player: Player) {
         this.tile = tile;
         this.stats = stats;
         this.owner = player;
+        this.health = stats.maxHealth;
     }
 }
 
