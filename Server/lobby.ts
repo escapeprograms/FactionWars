@@ -58,3 +58,13 @@ function filterLobby(lobby: Lobby): Lobby {
         started: lobby.started
     };
 }
+
+// NOTE: THE FUNCTION BELOW HAS NOT BEEN TESTED (But hopefully should work properly)
+// Verifies lobby is ready for game start
+function verifyLobby(lobby: Lobby): boolean {
+    const users = lobby.users;
+    const factions: {[key: string]: boolean} = {};
+    users.forEach(u=>factions[u.faction] = true);
+    // 4 users, unique factions, 2 users per team
+    return users.length === 4 && Object.keys(factions).length === 4 && users.reduce((acc, e)=>acc + e.team, 0) === 2;
+}
