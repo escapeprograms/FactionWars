@@ -1,15 +1,8 @@
-class Game {
-    private players: Player[];
+class GameInfo {
     private turn: Team = 0;
-    private id: string;
     private field: Tile[][] = [];
 
-    constructor (lobby: Lobby = {users: [], id: "", started:true}, fieldSize=50) {
-        this.id = lobby.id;
-        this.players = lobby.users.map((user: User) => {
-            // Modify or simplify later as necessary
-            return new Player(user);
-        });
+    constructor (fieldSize=50) {
         this.setField(fieldSize);
     }
 
@@ -41,20 +34,11 @@ class Game {
     }*/
 }
 
-class Player {
-    private id: string; // Server side, this is socketId; client side, this is clientId
-    private name: string;
-    private faction: Faction;
-    private team: Team;
+class PlayerInfo {
     private cards: Card[] = [];
     private buildings: Building[] = [];
     private units: Unit[] = [];
-    constructor(user:User) {
-        // Or maybe let it take in a User as a parameter? Or overload for both options?
-        this.id = user.id;
-        this.name = user.name;
-        this.faction = user.faction;
-        this.team = user.team;
+    constructor() {
     }
 }
 
