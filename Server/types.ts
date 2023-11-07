@@ -14,20 +14,22 @@ enum SocketState {
 type SocketInfo = {
     state: SocketState,
     clientId: string,
-    info: undefined | { user: User, lobby: Lobby } | { player: Player, game: Game }
+    info: undefined | { player: Player, game: Game }
 }
 
-type User = {
+type Player = {
     id: string, // Server side, this is socketId; client side, this is client id
     name: string
     faction: Faction,
     team: Team,
+    playerInfo: undefined | PlayerInfo // Undefined while in lobby
 };
 
-type Lobby = {
-    users: User[],
+type Game = {
+    players: Player[],
     id: string,
-    started: boolean
+    started: boolean // Same as gameInfo === undefined
+    gameInfo: undefined | GameInfo // Undefined while it is a lobby
 };
 
 type Result<T, U> = {
@@ -47,4 +49,10 @@ function failure<T, U>(value: U): Result<T, U> {
         isSuccessful: false,
         value: value
     }
+}
+
+enum CardType {
+    Unit = "U",
+    Building = "B",
+    Operation = "O"
 }

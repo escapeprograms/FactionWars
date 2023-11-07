@@ -1,4 +1,4 @@
-const lobbyTable: { [key: string]: Lobby } = {};
+const lobbyTable: { [key: string]: Game } = {};
 
 // Generate an unused lobbyID (four random capital letters)
 function generateLobbyId(): string {
@@ -11,12 +11,13 @@ function generateLobbyId(): string {
 }
 
 // create lobby and return it
-function createLobby(user: User): Lobby {
+function createLobby(player: Player): Game {
     const lobbyId = generateLobbyId();
-    const lobby = {
-        users: [user],
+    const lobby: Game = {
+        players: [player],
         id: lobbyId,
-        started: false
+        started: false,
+        gameInfo: undefined
     };
     lobbyTable[lobbyId] = lobby;
     return lobby;
@@ -34,27 +35,40 @@ enum LobbyJoinError {
 // on success, return lobby that was joined
 // on failure, return error enum
 // We are assuming no race conditions here; if it breaks, then we whip out the semaphore thingies
-function joinLobby(user: User, id: string): Result<Lobby, LobbyJoinError> {
+function joinLobby(player: Player, id: string): Result<Game, LobbyJoinError> {
     if (!/^[A-Z]{4}$/.test(id)) { return failure(LobbyJoinError.InvalidId); } // Checks that id is exactly 4 uppercase letters
     const lobby = lobbyTable[id];
     if (lobby === undefined) { return failure(LobbyJoinError.LobbyDoesntExist); }
     if (lobby.started) { return failure(LobbyJoinError.GameStarted); }
-    if (lobby.users.length >= 4) { return failure(LobbyJoinError.LobbyFull); }
+    if (lobby.players.length >= 4) { return failure(LobbyJoinError.LobbyFull); }
     // id is valid, join the game
-    lobby.users.push(user);
+    lobby.players.push(player);
     return success(lobby);
 }
 
 // Converts socketIds from users the given lobby into clientIds and returns a new lobby object
-function filterLobby(lobby: Lobby): Lobby {
+function filterLobby(lobby: Game): Game {
     return {
-        users: lobby.users.map(user => { return {
-            id: socketTable[user.id].clientId,
-            name: user.name,
-            faction: user.faction,
-            team: user.team
+        players: lobby.players.map(player => { return {
+            id: socketTable[player.id].clientId,
+            name: player.name,
+            faction: player.faction,
+            team: player.team,
+            playerInfo: player.playerInfo
         }}),
         id: lobby.id,
-        started: lobby.started
+        started: lobby.started,
+        gameInfo: lobby.gameInfo
     };
+}
+
+// NOTE: THE FUNCTION BELOW HAS NOT BEEN TESTED (But hopefully should work properly)
+// Verifies lobby is ready for game start
+function verifyLobby(lobby: Game): boolean {
+    const players = lobby.players;
+    const factions: {[key: string]: boolean} = {};
+    players.forEach(p=>factions[p.faction] = true);
+    // 4 users, unique factions, 2 users per team
+    // Does not verify that the lobby is not an already started game
+    return players.length === 4 && Object.keys(factions).length === 4 && players.reduce((acc, e)=>acc + e.team, 0) === 2;
 }

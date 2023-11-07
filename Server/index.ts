@@ -38,11 +38,16 @@ io.on("connection", (socket: Socket) => {
             // if (sock.state === SocketState.Menu) // Nothing to do here
             if (sock.state === SocketState.Lobby) {
                 // Remove player from lobby
-                const {user, lobby} = sock.info as { user: User, lobby: Lobby };
-                lobby.users = lobby.users.filter(x=>x.id !== socket.id);
-                socket.to(lobby.id).emit("player-left-lobby", sock.clientId);
+                const {player, game} = sock.info!;
+                game.players = game.players.filter(x=>x.id !== socket.id);
+                if (game.players.length === 0) {
+                    // Close lobby if lobby is empty
+                    delete lobbyTable[game.id];
+                } else {
+                    socket.to(game.id).emit("player-left-lobby", sock.clientId);
+                }
             } else if (sock.state === SocketState.Game) {
-                const {player, game} = sock.info as {game: Game, player: Player};
+                // const {player, game} = sock.info as {game: Game, player: Player};
                 // Do other stuff here as appropriate
                 // emit "player-left-game", sock.clientId
             } // Else, well, something's weird
@@ -51,15 +56,16 @@ io.on("connection", (socket: Socket) => {
     });
     socket.on("create-game", (name) => {
         if (isValidName(name)) {
-            const user: User = {
+            const player: Player = {
                 id: socket.id,
                 name: name,
                 faction: "T" as Faction,
-                team: 0
+                team: 0,
+                playerInfo: undefined
             };
-            const lobby = createLobby(user);
+            const lobby = createLobby(player);
             socketTable[socket.id].state = SocketState.Lobby;
-            socketTable[socket.id].info = {user: user, lobby: lobby};
+            socketTable[socket.id].info = {player: player, game: lobby};
             socket.join(lobby.id);
             socket.emit("joined-lobby", filterLobby(lobby));
             // Not emitting new-join because there shouldn't be anyone else in the lobby
@@ -70,17 +76,18 @@ io.on("connection", (socket: Socket) => {
     });
     socket.on("join-game", (name, lobbyId) => {
         if (isValidName(name)) {
-            const user: User = {
+            const player: Player = {
                 id: socket.id,
                 name: name,
                 faction: "T",
-                team: 0
+                team: 0,
+                playerInfo: undefined
             }
-            const result = joinLobby(user, lobbyId);
+            const result = joinLobby(player, lobbyId);
             if (result.isSuccessful) {
-                const lobby = result.value as Lobby;
+                const lobby = result.value as Game;
                 socketTable[socket.id].state = SocketState.Lobby;
-                socketTable[socket.id].info = {user: user, lobby: lobby};
+                socketTable[socket.id].info = {player: player, game: lobby};
                 socket.join(lobby.id);
                 socket.emit("joined-lobby", filterLobby(lobby))
                 socket.to(lobbyId).emit("new-join", {name:name, clientId:socketTable[socket.id].clientId});
@@ -96,10 +103,10 @@ io.on("connection", (socket: Socket) => {
         if (!sock || sock.state !== SocketState.Lobby) {
             socket.emit("team-change-error", "invalid-state")
         } else {
-            const {user, lobby} = sock.info as { user: User, lobby: Lobby };
-            user.team = 1 - user.team;
-            socket.emit("team-change-success", user.team);
-            socket.to(lobby.id).emit("team-change", { clientId: sock.clientId, team: user.team });
+            const {player, game} = sock.info!;
+            player.team = 1 - player.team;
+            socket.emit("team-change-success", player.team);
+            socket.to(game.id).emit("team-change", { clientId: sock.clientId, team: player.team });
         }
     });
     socket.on("change-faction", (faction) => {
@@ -109,7 +116,7 @@ io.on("connection", (socket: Socket) => {
         } else if (!(faction === "T" || faction === "M" || faction === "S" || faction === "A")) {
             socket.emit("faction-change-error", "invalid-faction")
         } else {
-            const {user, lobby} = sock.info as { user: User, lobby: Lobby };
+            const {player, game} = sock.info!;
             /*
             // Check that the faction is not the same as the current faction
             if (faction !== user.faction) {
@@ -121,9 +128,9 @@ io.on("connection", (socket: Socket) => {
             }
             */
             // Allow change to same faction
-            user.faction = faction;
+            player.faction = faction;
             socket.emit("faction-change-success", faction);
-            socket.to(lobby.id).emit("faction-change", { clientId: sock.clientId, faction: user.faction });
+            socket.to(game.id).emit("faction-change", { clientId: sock.clientId, faction: player.faction });
         }
     });
 })
