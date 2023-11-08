@@ -102,13 +102,15 @@ class BuildingStats {
     private moneyGen: number; // Money generated at the start of each turn
     private energyGen: number; // Energy generated at the start of each turn
     private buildTime: number; 
+    private size: number; // Buildings are assumed to be square
     // Add passive money/energy generation properties?
     // Add attributes property?
-    constructor(maxHealth: number, damage: number, range: number, upkeep: number, buildTime=1, moneyGen=0, energyGen=0) {
+    constructor(maxHealth: number, damage: number, range: number, upkeep: number, size=1, buildTime=1, moneyGen=0, energyGen=0) {
         this.maxHealth = maxHealth;
         this.damage = damage;
         this.range = range;
         this.upkeep = upkeep;
+        this.size = size;
         this.buildTime=buildTime;
         this.moneyGen=moneyGen;
         this.energyGen=energyGen;
@@ -116,12 +118,12 @@ class BuildingStats {
 }
 
 class Building {
-    private tile: Tile;
+    private tiles: Tile[];
     private stats: BuildingStats;
     private owner: Player;
     private health: number; // Current health
-    constructor(tile: Tile, stats: BuildingStats, player: Player) {
-        this.tile = tile;
+    constructor(tiles: Tile[], stats: BuildingStats, player: Player) {
+        this.tiles = tiles;
         this.stats = stats;
         this.owner = player;
         this.health = stats.maxHealth;

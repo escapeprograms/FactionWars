@@ -9,7 +9,8 @@
         "moneyGen": 0,
         "energyGen": 0,
         "buildTime": 1,
-        "actives": "Active ability name here",
+        "size": 1,
+        "actives": "Active ability name here, or null",
         "passives": "Passive ability here if can't fit into attributes?",
         "attributes": []
     },
@@ -24,6 +25,7 @@
         "moneyGen": 2,
         "energyGen": 4,
         "buildTime": 0,
+        "size": 3,
         "actives": "Industrial Might",
         "passives": null,
         "attributes": ["hq"]
@@ -39,6 +41,7 @@
         "moneyGen": 2,
         "energyGen": 0,
         "buildTime": 0,
+        "size": 2,
         "actives": null,
         "passives": null,
         "attributes": []
@@ -54,6 +57,7 @@
         "moneyGen": 0,
         "energyGen": 6,
         "buildTime": 0,
+        "size": 2,
         "actives": null,
         "passives": null,
         "attributes": []
@@ -69,6 +73,7 @@
         "moneyGen": 0,
         "energyGen": 0,
         "buildTime": 0,
+        "size": 2,
         "actives": null,
         "passives": null,
         "attributes": ["wall"]
