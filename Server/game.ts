@@ -99,13 +99,19 @@ class BuildingStats {
     private damage: number; // Attack damage, 0 for doesn't attack?
     private range: number; // 0 for doesn't attack normally?
     private upkeep: number; // amount of energy required for upkeep
+    private moneyGen: number; // Money generated at the start of each turn
+    private energyGen: number; // Energy generated at the start of each turn
+    private buildTime: number; 
     // Add passive money/energy generation properties?
     // Add attributes property?
-    constructor(maxHealth: number, damage: number, range: number, upkeep: number) {
+    constructor(maxHealth: number, damage: number, range: number, upkeep: number, buildTime=1, moneyGen=0, energyGen=0) {
         this.maxHealth = maxHealth;
         this.damage = damage;
         this.range = range;
         this.upkeep = upkeep;
+        this.buildTime=buildTime;
+        this.moneyGen=moneyGen;
+        this.energyGen=energyGen;
     }
 }
 
