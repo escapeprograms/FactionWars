@@ -4,7 +4,7 @@ const path = require("node:path");
 const http = require("http");
 const express = require("express");
 const socketio = require("socket.io");
-const isValidName = require("../../Client/functions.js");
+const isValidName = require("../../Client/functions.js"); // Should we use path.join() for this and related requires?
 
 const clientPath = path.join(__dirname, "../../Client");
 console.log("Serving static from " + clientPath);
@@ -131,6 +131,31 @@ io.on("connection", (socket: Socket) => {
             player.faction = faction;
             socket.emit("faction-change-success", faction);
             socket.to(game.id).emit("faction-change", { clientId: sock.clientId, faction: player.faction });
+        }
+    });
+    socket.on("start-game", ()=> {
+        const sock = socketTable[socket.id];
+        if (!sock || sock.state !== SocketState.Lobby) {
+            socket.emit("game-start-error", "invalid-state");
+        } else {
+            const {player, game} = sock.info!;
+            // Verify sender is host (might change or remove this part in the future?)
+            if (game.players[0] !== player) {
+                socket.emit("game-start-error", "not-host");
+            } else if(verifyLobby(game)) {
+                // Start the game
+                // TODO
+                game.gameInfo = new GameInfo(game.players); // Possibly add arguments later
+                game.players.forEach(p=>{
+                    p.playerInfo = new PlayerInfo() // Possibly add arguments later
+                    socketTable[p.id].state = SocketState.Game; // socketTable[p.id] should never be undefined
+                }); 
+                game.started = true;
+                // Do other start game stuff and send message
+                socket.to(game.id).emit("game-start", filterLobby(game)); // TODO: Also make sure initial socket receives message
+            } else {
+                socket.emit("game-start-error", "invalid-lobby");
+            }
         }
     });
 })

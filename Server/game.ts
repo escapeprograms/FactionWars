@@ -1,20 +1,60 @@
+const buildings = require("../../Client/buildings.json"); // require() automatically parses the json
+const units = require("../../Client/units.json");
+
 class GameInfo {
     private turn: Team = 0;
-    private field: Tile[][] = [];
+    private field!: Field; // [0][0] is top left corner. [x] moves right, [y] moves down
+    private fieldSize: number // Not sure if this is necessary
+    private players: Player[][] = [[], []];
 
-    constructor (fieldSize=50) {
+    constructor (players: Player[], fieldSize=50) {
+        players.forEach(p=>this.players[p.team].push(p));
+        this.fieldSize = fieldSize;
         this.setField(fieldSize);
     }
 
     setField(size: number) {
         // Currently assuming square fields only
-        for (let i = 0; i < size; i++) {
-            const row: Tile[] = [];
-            for (let j = 0; j < size; j++) {
-                row.push(new Tile());
+        // Create field
+        this.field = new Field(size);
+        // Make HQs
+        // TODO: Fix later: Right now, we will simply spawn HQs in the corners
+        const stats: BuildingStats = buildings["hq"];
+        // TODO: Fix later: Right now, assumes there is enough space for the HQs
+        if (size < stats.size * 2 ) {throw new Error("field too small");}
+        for (let i = 0; i <= 1; i++) {
+            for (let j = 0; j <= 1; j++) {
+                // Team 0's HQs are at the top corners of the map, and Team 1 the bottom corners
+                this.spawnBuilding(stats, i * (size - stats.size), j * (size - stats.size), this.players[i][j]);
             }
-            this.field.push(row);
         }
+        
+    }
+
+    // Spawns a building with its top left corner at (x, y)
+    // Not sure what to return if invalid
+    spawnBuilding(building: BuildingStats, x:number, y:number, owner: Player): Result<Building, undefined> {
+        // Verify placement
+        if (this.verifyPlacement(building.size, x, y)) {
+            const tiles: Tile[] = [];
+            this.field.iterate((i, j)=>tiles.push(this.field[i][j]), x, y, x+building.size, y+building.size);
+            const b = new Building(tiles, building, owner);
+            tiles.forEach(t=>t.build(b));
+            // Maybe add stuff for build time?
+            return success(b);
+        } else  {
+            return failure(undefined);
+        }
+    }
+
+    // Verifies if a building can be placed at the specified location
+    verifyPlacement(size: number, x: number, y: number):boolean {
+        if (x < 0 || y < 0 || x + size > this.fieldSize || y + size > this.fieldSize) { return false;}
+        if (x % 1 !== 0 || y % 1 !== 0) {return false;}
+        
+        let valid = true;
+        this.field.iterate((i, j)=>{if (this.field[i][j].occupied) valid = false;}, y, x+size, y+size)
+        return valid;
     }
 
     endTurn() {
@@ -53,29 +93,46 @@ class Card {
 
 class Tile {
     // private terrain; // To be implemented later?
-    private building: Building | null = null;
-    private unit: Unit | null = null;
-    hasBuilding() {return this.building === null;}
-    hasUnit() {return this.unit === null;}
-    // Or should we just make building and unit public?
-    getBuilding() {return this.building;}
-    getUnit() {return this.unit;}
+    public building: Building | null = null;
+    public unit: Unit | null = null;
+    public occupied = false; // Equivalent to building or unit not null
+    build(b: Building) {
+        this.building = b;
+        this.occupied = true;
+    }
 }
 
-class UnitStats {
-    // Contains the stats of a unit
-    public maxHealth: number;
-    private damage: number; // Attack damage
-    private speed: number;
-    private range: number; // 1 = melee
-    private attributes: string[]; // Could potentially make a new type or enum for this
-    constructor(maxHealth: number, damage: number, speed: number, range: number, ...attributes: string[]) {
-        this.maxHealth = maxHealth;
-        this.damage = damage;
-        this.speed = speed;
-        this.range = range;
-        this.attributes = attributes;
+class Field {
+    public fieldSize: number;
+    [key: number]: Tile[]
+
+    constructor(fieldSize = 50) {
+        this.fieldSize = fieldSize;
+        for (let i = 0; i < fieldSize; i++) {
+            const row: Tile[] = [];
+            for (let j = 0; j < fieldSize; j++) {
+                row.push(new Tile());
+            }
+            this[i] = row;
+        }
     }
+
+    iterate(f: (i: number, j: number)=>void, x:number, y:number, xEnd=this.fieldSize, yEnd=this.fieldSize) {
+        for (let i = x; i < xEnd; i++) {
+            for (let j = y; y < yEnd; j++) {
+                f(i, j);
+            }
+        }
+    }
+}
+
+type UnitStats  = {
+    // Contains the stats of a unit
+    maxHealth: number;
+    damage: number; // Attack damage
+    speed: number;
+    range: number; // 1 = melee
+    attributes: string[]; // Could potentially make a new type or enum for this
     // Possibly add methods for getting and changing stats
     // Possibly add methods for taking damage, dying, and other actions
 }
@@ -94,27 +151,16 @@ class Unit {
     }
 }
 
-class BuildingStats {
-    public maxHealth: number;
-    private damage: number; // Attack damage, 0 for doesn't attack?
-    private range: number; // 0 for doesn't attack normally?
-    private upkeep: number; // amount of energy required for upkeep
-    private moneyGen: number; // Money generated at the start of each turn
-    private energyGen: number; // Energy generated at the start of each turn
-    private buildTime: number; 
-    private size: number; // Buildings are assumed to be square
-    // Add passive money/energy generation properties?
-    // Add attributes property?
-    constructor(maxHealth: number, damage: number, range: number, upkeep: number, size=1, buildTime=1, moneyGen=0, energyGen=0) {
-        this.maxHealth = maxHealth;
-        this.damage = damage;
-        this.range = range;
-        this.upkeep = upkeep;
-        this.size = size;
-        this.buildTime=buildTime;
-        this.moneyGen=moneyGen;
-        this.energyGen=energyGen;
-    }
+type BuildingStats  = {
+    maxHealth: number;
+    damage: number; // Attack damage, 0 for doesn't attack?
+    range: number; // 0 for doesn't attack normally?
+    upkeep: number; // amount of energy required for upkeep
+    moneyGen: number; // Money generated at the start of each turn
+    energyGen: number; // Energy generated at the start of each turn
+    buildTime: number; 
+    size: number; // Buildings are assumed to be square
+    attributes: string[];
 }
 
 class Building {
