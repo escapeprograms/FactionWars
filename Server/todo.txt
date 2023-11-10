@@ -4,3 +4,4 @@ Things to Do, Amongst Others
    Edit creation of users after we figure that out.
  - Add game logic and apply proper changes to "disconnect" event
  - Test the new code
+- When buildings are activated/disactivated, check for reactivation?

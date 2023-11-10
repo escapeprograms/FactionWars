@@ -145,11 +145,11 @@ io.on("connection", (socket: Socket) => {
             } else if(verifyLobby(game)) {
                 // Start the game
                 // TODO
-                game.gameInfo = new GameInfo(game.players); // Possibly add arguments later
                 game.players.forEach(p=>{
                     p.playerInfo = new PlayerInfo() // Possibly add arguments later
                     socketTable[p.id].state = SocketState.Game; // socketTable[p.id] should never be undefined
                 }); 
+                game.gameInfo = new GameInfo(game.players); // Possibly add arguments later
                 game.started = true;
                 // Do other start game stuff and send message
                 socket.to(game.id).emit("game-start", filterLobby(game)); // TODO: Also make sure initial socket receives message

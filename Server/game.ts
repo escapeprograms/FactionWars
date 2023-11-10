@@ -39,6 +39,7 @@ class GameInfo {
             const tiles: Tile[] = [];
             this.field.iterate((i, j)=>tiles.push(this.field[i][j]), x, y, x+building.size, y+building.size);
             const b = new Building(tiles, building, owner);
+            owner.playerInfo!.buildings.push(b); // Assumes playerinfo is not null
             tiles.forEach(t=>t.build(b));
             // Maybe add stuff for build time?
             return success(b);
@@ -59,8 +60,19 @@ class GameInfo {
 
     endTurn() {
         // Activate end of turn effects, as applicable
+        this.players[this.turn].forEach(p=>p.playerInfo!.buildings.forEach(b=>b.endTurn())); // Assumes playerInfo is not null
         this.turn = 1 - this.turn;
-        // Start new turn? Activate start of turn effects?
+        // call startTurn() here?
+    }
+
+    startTurn() {
+        // Activate start of turn effects, as applicable
+        // Generate energy
+        // Deactivate buildings?
+        // Generate money and other effects
+        // TODO
+        this.players[this.turn].forEach(p=>p.playerInfo!.buildings.forEach(b=>b.startTurn())); // Assumes playerInfo is not null
+        // Start timer?
     }
 
     // Returns a copy of the game with player socketIds replaced by clientIds
@@ -76,9 +88,21 @@ class GameInfo {
 
 class PlayerInfo {
     private cards: Card[] = [];
-    private buildings: Building[] = [];
+    public buildings: Building[] = [];
     private units: Unit[] = [];
+    public money = 0;
+    public energy = 0; // Current energy output
     constructor() {
+
+    }
+    // Deactivates buildings until energy is nonnegative
+    upkeep() {
+        let i = this.buildings.length;
+        while (this.energy < 0) {
+            if (this.buildings[--i].stats.upkeep > 0) {
+                this.buildings[i].deactivate();
+            }
+        }
     }
 }
 
@@ -165,15 +189,53 @@ type BuildingStats  = {
 
 class Building {
     private tiles: Tile[];
-    private stats: BuildingStats;
+    public stats: BuildingStats;
     private owner: Player;
     private health: number; // Current health
+    private buildLeft: number; // Turns left for buildTime
+    private active: boolean; // Whether the building is active or inactive (disactivated)
     constructor(tiles: Tile[], stats: BuildingStats, player: Player) {
         this.tiles = tiles;
         this.stats = stats;
         this.owner = player;
         this.health = stats.maxHealth;
+        this.buildLeft = stats.buildTime;
+        this.active = this.buildLeft === 0;
+        if (this.active && stats.energyGen > 0) {player.playerInfo!.energy += stats.energyGen;}
     }
+    endTurn() {
+        // Decrement construction time
+        if (this.buildLeft > 0) {
+            /*if(--this.buildLeft === 0 && this.owner.playerInfo!.energy >= this.stats.upkeep) {
+                this.owner.playerInfo!.energy -= this.stats.upkeep;
+                this.active = true;
+            }*/
+            this.buildLeft--;
+            this.activate();
+        }
+        // Maybe more stuff here, as applicable
+    }
+    startTurn() {
+        // Generate, if active
+    }
+    // Returns whether or not it is active
+    activate(): boolean {
+        if (!this.active && this.buildLeft === 0 && this.stats.upkeep <= this.owner.playerInfo!.energy) {
+            this.owner.playerInfo!.energy += this.stats.energyGen - this.stats.upkeep;
+            this.active = true;
+        }
+        return this.active;
+    }
+    deactivate() {
+        if (this.active) {
+            this.owner.playerInfo!.energy -= this.stats.energyGen - this.stats.upkeep;
+            this.active = false;
+        }
+    }
+    /*generate() {
+        this.owner.playerInfo!.money += this.stats.moneyGen;
+        this.owner.playerInfo!.energy += this.stats.energyGen;
+    }*/
 }
 
 /*let x = {
