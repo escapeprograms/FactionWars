@@ -41,7 +41,7 @@ io.on("connection", (socket: Socket) => {
             if (sock.state === SocketState.Lobby) {
                 // Remove player from lobby
                 const {player, game} = sock.info!;
-                game.players = game.players.filter(x=>x.id !== socket.id);
+                game.players = game.players.filter(x => x.id !== socket.id);
                 if (game.players.length === 0) {
                     // Close lobby if lobby is empty
                     delete lobbyTable[game.id];

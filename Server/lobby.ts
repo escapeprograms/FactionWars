@@ -33,7 +33,6 @@ enum LobbyJoinError {
     GameStarted = "Game already started"
 }
 
-
 // Add user to lobby if able
 // on success, return lobby that was joined
 // on failure, return error enum
