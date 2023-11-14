@@ -1,4 +1,4 @@
 const socket = io();
 
 
-socket.emit("test","WASSSSSUP BITCHESSSS");
+socket.emit("create-game","WASSSSSUP BITCHESSSS");//

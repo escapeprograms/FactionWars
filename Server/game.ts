@@ -1,7 +1,10 @@
-const buildings = require("../../Client/buildings.json"); // require() automatically parses the json
-const units = require("../../Client/units.json");
+import { CardType, Player, Team, success, failure, Result } from "./types.js";
+import buildings from "./../Client/buildings.json" assert { type: "json" }; // See if this works or needs parsing
+import units from "./../Client/units.json" assert {type: "json"}; // See if this works or needs parsing
+//const units = require("./../../Client/units.json") as {[key: string]: UnitStats}; // Doesn't work with CommonJS
+//const buildings = require("./../../Client/buildings.json") as {[key: string]: BuildingStats}; // Doesn't work with CommonJS
 
-class GameInfo {
+export class GameInfo {
     private turn: Team = 0;
     private field!: Field; // [0][0] is top left corner. [x] moves right, [y] moves down
     private fieldSize: number // Not sure if this is necessary
@@ -86,7 +89,7 @@ class GameInfo {
     }*/
 }
 
-class PlayerInfo {
+export class PlayerInfo {
     private cards: Card[] = [];
     public buildings: Building[] = [];
     private units: Unit[] = [];
