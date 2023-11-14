@@ -123,9 +123,3 @@ class Building {
         this.health = stats.maxHealth;
     }
 }
-
-/*let x = {
-    error: true,
-    type: "ur bad",
-    msg: "please get gud"
-}*/
