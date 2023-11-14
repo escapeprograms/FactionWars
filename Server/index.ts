@@ -1,19 +1,16 @@
-import { Socket } from "socket.io";
+import path from "node:path";
+import http from "http";
+import express from "express";
+import { Server, Socket } from "socket.io";
 
-const path = require("node:path");
-const http = require("http");
-const express = require("express");
-const socketio = require("socket.io");
-const isValidName = require("../../Client/functions.js");
-
-const clientPath = path.join(__dirname, "../../Client");
+const clientPath = path.resolve("Client")
 console.log("Serving static from " + clientPath);
 
 const app = express();
 app.use(express.static(clientPath))
 
 const server = http.createServer(app);
-const io = socketio(server);
+const io = new Server(server);
 
 io.on("connection", (socket: Socket) => {
     // Add socket to socketTable

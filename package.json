@@ -15,5 +15,6 @@
     "http": "^0.0.1-security",
     "socket.io": "^4.7.2",
     "typescript": "^5.2.2"
-  }
+  },
+  "type": "module"
 }
