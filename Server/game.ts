@@ -1,4 +1,6 @@
-class GameInfo {
+import { CardType, Player, Team } from "./types.js";
+
+export class GameInfo {
     private turn: Team = 0;
     private field: Tile[][] = [];
 
@@ -34,7 +36,7 @@ class GameInfo {
     }*/
 }
 
-class PlayerInfo {
+export class PlayerInfo {
     private cards: Card[] = [];
     private buildings: Building[] = [];
     private units: Unit[] = [];

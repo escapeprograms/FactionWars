@@ -3,6 +3,11 @@ import http from "http";
 import express from "express";
 import { Server, Socket } from "socket.io";
 
+import { socketTable, generateClientId } from "./users.js"
+import { isValidName } from "../Client/functions.js";
+import { createLobby, joinLobby, filterLobby, lobbyTable } from "./lobby.js";
+import { SocketState, Faction, Game, Player } from "./types.js";
+
 const clientPath = path.resolve("Client")
 console.log("Serving static from " + clientPath);
 

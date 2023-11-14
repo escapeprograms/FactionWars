@@ -1,4 +1,6 @@
-const socketTable:{[id: string]: SocketInfo} = {}
+import { SocketInfo } from "./types.js";
+
+export const socketTable: {[id: string]: SocketInfo} = {}
 
 
 // A total of 36^4 = 1679616 clients can be supported before repeats happen
@@ -8,7 +10,7 @@ const startPos = [Math.floor(Math.random()*36), Math.floor(Math.random()*36), Ma
 // One of two ways to combine the random and nonrandom parts
 const randFirst = Math.floor(Math.random() * 2);
 // Returns an 8 character clientId, 4 of which are random and 4 of which are permuted so that there are no duplicates
-function generateClientId():string {
+export function generateClientId(): string {
     const genChar = () => (Math.floor(Math.random() * 36)).toString(36);
     let id = "";
     for (let i = (0-randFirst); i < (8 - randFirst); i++) {
