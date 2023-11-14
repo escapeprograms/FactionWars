@@ -1,4 +1,7 @@
-const lobbyTable: { [key: string]: Game } = {};
+import { Game, Player, Result, failure, success } from "./types.js";
+import { socketTable } from "./users.js"
+
+export const lobbyTable: { [key: string]: Game } = {};
 
 // Generate an unused lobbyID (four random capital letters)
 function generateLobbyId(): string {
@@ -11,7 +14,7 @@ function generateLobbyId(): string {
 }
 
 // create lobby and return it
-function createLobby(player: Player): Game {
+export function createLobby(player: Player): Game {
     const lobbyId = generateLobbyId();
     const lobby: Game = {
         players: [player],
@@ -30,12 +33,11 @@ enum LobbyJoinError {
     GameStarted = "Game already started"
 }
 
-
 // Add user to lobby if able
 // on success, return lobby that was joined
 // on failure, return error enum
 // We are assuming no race conditions here; if it breaks, then we whip out the semaphore thingies
-function joinLobby(player: Player, id: string): Result<Game, LobbyJoinError> {
+export function joinLobby(player: Player, id: string): Result<Game, LobbyJoinError> {
     if (!/^[A-Z]{4}$/.test(id)) { return failure(LobbyJoinError.InvalidId); } // Checks that id is exactly 4 uppercase letters
     const lobby = lobbyTable[id];
     if (lobby === undefined) { return failure(LobbyJoinError.LobbyDoesntExist); }
@@ -47,7 +49,7 @@ function joinLobby(player: Player, id: string): Result<Game, LobbyJoinError> {
 }
 
 // Converts socketIds from users the given lobby into clientIds and returns a new lobby object
-function filterLobby(lobby: Game): Game {
+export function filterLobby(lobby: Game): Game {
     return {
         players: lobby.players.map(player => { return {
             id: socketTable[player.id].clientId,

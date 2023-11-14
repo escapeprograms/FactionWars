@@ -1,19 +1,21 @@
-import { Socket } from "socket.io";
+import path from "node:path";
+import http from "http";
+import express from "express";
+import { Server, Socket } from "socket.io";
 
-const path = require("node:path");
-const http = require("http");
-const express = require("express");
-const socketio = require("socket.io");
-const isValidName = require("../../Client/functions.js");
+import { socketTable, generateClientId } from "./users.js"
+import { isValidName } from "../Client/functions.js";
+import { createLobby, joinLobby, filterLobby, lobbyTable } from "./lobby.js";
+import { SocketState, Faction, Game, Player } from "./types.js";
 
-const clientPath = path.join(__dirname, "../../Client");
+const clientPath = path.resolve("Client")
 console.log("Serving static from " + clientPath);
 
 const app = express();
 app.use(express.static(clientPath))
 
 const server = http.createServer(app);
-const io = socketio(server);
+const io = new Server(server);
 
 io.on("connection", (socket: Socket) => {
     // Add socket to socketTable
@@ -39,7 +41,7 @@ io.on("connection", (socket: Socket) => {
             if (sock.state === SocketState.Lobby) {
                 // Remove player from lobby
                 const {player, game} = sock.info!;
-                game.players = game.players.filter(x=>x.id !== socket.id);
+                game.players = game.players.filter(x => x.id !== socket.id);
                 if (game.players.length === 0) {
                     // Close lobby if lobby is empty
                     delete lobbyTable[game.id];
