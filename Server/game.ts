@@ -30,12 +30,8 @@ class GameInfo {
         const stats: BuildingStats = buildings["hq"];
         // TODO: Fix later: Right now, assumes there is enough space for the HQs
         if (size < stats.size * 2 ) {throw new Error("field too small");}
-        for (let i = 0; i <= 1; i++) {
-            for (let j = 0; j <= 1; j++) {
-                // Team 0's HQs are at the top corners of the map, and Team 1 the bottom corners
-                this.spawnBuilding(stats, i * (size - stats.size), j * (size - stats.size), this.players[i][j]);
-            }
-        }
+        const obj = this;
+        doubleIt((i, j) => obj.spawnBuilding(stats, i * (size - stats.size), j * (size - stats.size), obj.players[i][j]), 0, 0, 1, 1);
         
     }
 
@@ -46,7 +42,7 @@ class GameInfo {
         if (this.verifyPlacement(building.size, x, y)) {
             const tiles: Tile[] = [];
             const obj = this;
-            iterate((i, j)=>tiles.push(obj.field[i][j]), x, y, x+building.size, y+building.size);
+            doubleIt((i, j)=>tiles.push(obj.field[i][j]), x, y, x+building.size, y+building.size);
             const b = new Building(tiles, building, owner);
             owner.playerInfo!.buildings.push(b); // Assumes playerinfo is not null
             tiles.forEach(t=>t.build(b));
@@ -64,7 +60,7 @@ class GameInfo {
         
         let valid = true;
         const obj = this;
-        iterate((i, j)=>{
+        doubleIt((i, j)=>{
             console.log("i/j is: " + i + j);
             if (obj.field[i][j].occupied) valid = false;
         }, x, y, x+size, y+size);
@@ -139,7 +135,7 @@ class Tile {
     }
 }
 
-function iterate(f: (i: number, j: number)=>void, x:number, y:number, xEnd:number, yEnd:number) {
+function doubleIt(f: (i: number, j: number)=>void, x:number, y:number, xEnd:number, yEnd:number) {
     for (let i = x; i < xEnd; i++) {
         for (let j = y; j < yEnd; j++) {
             f(i, j);
