@@ -4,7 +4,7 @@ import units from "./../Client/units.json" assert {type: "json"}; // See if this
 
 class GameInfo {
     private turn: Team = 0;
-    private field!: Field; // [0][0] is top left corner. [x] moves right, [y] moves down
+    private field: Tile[][] = []; // [0][0] is top left corner. [x] moves right, [y] moves down
     private fieldSize: number // Not sure if this is necessary
     private players: Player[][] = [[], []];
 
@@ -17,7 +17,14 @@ class GameInfo {
     setField(size: number) {
         // Currently assuming square fields only
         // Create field
-        this.field = new Field(size);
+        for (let i = 0; i < size; i++) {
+            const row = [];
+            for (let j = 0; j < size; j++) {
+                row.push(new Tile());
+            }
+            this.field.push(row);
+        }
+        console.log(this.field);
         // Make HQs
         // TODO: Fix later: Right now, we will simply spawn HQs in the corners
         const stats: BuildingStats = buildings["hq"];
@@ -38,7 +45,8 @@ class GameInfo {
         // Verify placement
         if (this.verifyPlacement(building.size, x, y)) {
             const tiles: Tile[] = [];
-            this.field.iterate((i, j)=>tiles.push(this.field[i][j]), x, y, x+building.size, y+building.size);
+            const obj = this;
+            iterate((i, j)=>tiles.push(obj.field[i][j]), x, y, x+building.size, y+building.size);
             const b = new Building(tiles, building, owner);
             owner.playerInfo!.buildings.push(b); // Assumes playerinfo is not null
             tiles.forEach(t=>t.build(b));
@@ -55,7 +63,11 @@ class GameInfo {
         if (x % 1 !== 0 || y % 1 !== 0) {return false;}
         
         let valid = true;
-        this.field.iterate((i, j)=>{if (this.field[i][j].occupied) valid = false;}, y, x+size, y+size)
+        const obj = this;
+        iterate((i, j)=>{
+            console.log("i/j is: " + i + j);
+            if (obj.field[i][j].occupied) valid = false;
+        }, x, y, x+size, y+size);
         return valid;
     }
 
@@ -127,29 +139,14 @@ class Tile {
     }
 }
 
-class Field {
-    public fieldSize: number;
-    [key: number]: Tile[]
-
-    constructor(fieldSize = 50) {
-        this.fieldSize = fieldSize;
-        for (let i = 0; i < fieldSize; i++) {
-            const row: Tile[] = [];
-            for (let j = 0; j < fieldSize; j++) {
-                row.push(new Tile());
-            }
-            this[i] = row;
-        }
-    }
-
-    iterate(f: (i: number, j: number)=>void, x:number, y:number, xEnd=this.fieldSize, yEnd=this.fieldSize) {
-        for (let i = x; i < xEnd; i++) {
-            for (let j = y; y < yEnd; j++) {
-                f(i, j);
-            }
+function iterate(f: (i: number, j: number)=>void, x:number, y:number, xEnd:number, yEnd:number) {
+    for (let i = x; i < xEnd; i++) {
+        for (let j = y; j < yEnd; j++) {
+            f(i, j);
         }
     }
 }
+
 
 type UnitStats  = {
     // Contains the stats of a unit
