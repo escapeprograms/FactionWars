@@ -25,3 +25,5 @@ team-change (gives clientId and new team, tells client other client in lobby has
 faction-change-error (gives error, tells client error in changing faction)
 faction-change-success (gives new faction, tells client they have successfully changed factions)
 faction-change (gives clientId and new faction, tells client other client in lobby has changed factions)
+game-start-error (gives error, tells client error in starting game)
+game-start (gives game, tells client game has started)

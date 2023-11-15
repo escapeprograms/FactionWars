@@ -1,0 +1,25 @@
+{
+    "template": {
+        "name":"template | order unit entries by faction, then name",
+        "faction": "N for neutral",
+        "maxHealth": 0,
+        "damage": 0,
+        "range": 0,
+        "speed": 1,
+        "actives": "Active ability name here, if any",
+        "passives": "Possibly passive ability here if can't fit into attributes?",
+        "attributes": []
+    },
+
+    "footsoldier": {
+        "name": "Footsoldier",
+        "faction": "N",
+        "maxHealth": 4,
+        "damage": 2,
+        "range": 5,
+        "speed": 4,
+        "actives": null,
+        "passives": null,
+        "attributes": []
+    }
+}
