@@ -36,7 +36,7 @@ export class GameInfo {
 
     // Spawns a building with its top left corner at (x, y)
     // Not sure what to return if invalid
-    spawnBuilding(building: BuildingStats, x:number, y:number, owner: Player): Result<Building, undefined> {
+    spawnBuilding(building: BuildingStats, x:number, y:number, owner: Player): Building | null {
         // Verify placement
         if (this.verifyPlacement(building.size, x, y)) {
             const tiles: Tile[] = [];
@@ -45,9 +45,9 @@ export class GameInfo {
             owner.playerInfo!.buildings.push(b); // Assumes playerinfo is not null
             tiles.forEach(t=>t.build(b));
             // Maybe add stuff for build time?
-            return success(b);
+            return b;
         } else  {
-            return failure(undefined);
+            return null;
         }
     }
 
