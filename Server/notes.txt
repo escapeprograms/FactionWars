@@ -45,3 +45,5 @@ Energy Implementation
  - Each user (Player.PlayerStats)'s energy property tracks the current energy output
  - When a building generates or stops generating energy, the user's energy property is changed accordingly
  - If the user's energy output is ever less than energy usage, their buildings will be deactivated in order of last built
+
+ Note: It is difficult to send functions over sockets. Do not have a loop with objects that reference each other.
