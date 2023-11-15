@@ -24,7 +24,6 @@ class GameInfo {
             }
             this.field.push(row);
         }
-        console.log(this.field);
         // Make HQs
         // TODO: Fix later: Right now, we will simply spawn HQs in the corners
         const stats: BuildingStats = buildings["hq"];
@@ -61,7 +60,6 @@ class GameInfo {
         let valid = true;
         const obj = this;
         doubleIt((i, j)=>{
-            console.log("i/j is: " + i + j);
             if (obj.field[i][j].occupied) valid = false;
         }, x, y, x+size, y+size);
         return valid;
