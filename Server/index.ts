@@ -35,6 +35,12 @@ io.on("connection", (socket: Socket) => {
             }
         } // else, should be a recovered user already in the table
     }
+    // This event is for testing only
+    socket.on("test", (data)=> {
+        const mkPlayer = () => ({id: 'a', name: 'a', faction: "T" as Faction, team: 0, playerInfo: undefined});
+        const a = new GameInfo([mkPlayer(), mkPlayer(), mkPlayer(), mkPlayer()]);
+        console.log(a);
+    });
     socket.on("disconnect", (reason)=> {
         console.log(socket.id + " has disconnected.");//
         // For now, we don't care about the reason
