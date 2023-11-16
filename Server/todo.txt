@@ -5,4 +5,4 @@ Things to Do, Amongst Others
     - Or maybe it's fine? It's just that refreshing will disconnect.
  - Add game logic and apply proper changes to "disconnect" event
  - Test the new code
-- When buildings are activated/disactivated, check for reactivation?
+ - When buildings are activated/disactivated, check for reactivation?

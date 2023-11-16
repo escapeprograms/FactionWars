@@ -122,6 +122,38 @@ class Card {
     }
 }
 
+class Deck {
+    // TODO
+    private cards: Card[] = [];
+    private size = 0; // Is this needed?
+    constructor() {
+        // Maybe add some stuff later
+    }
+    shuffle() {
+        let temp = -1;
+        for (let i = 0; i < this.size - 1; i++) {
+            temp = i + Math.floor((this.size - i) * Math.random());
+            [this.cards[i], this.cards[temp]] = [this.cards[temp], this.cards[i]];
+        }
+    }
+    add(cardName: string, cardType: CardType, quantity: number) {
+        // Update parameters later as card constructor changes
+        for (let i = 0; i < quantity; i++) {this.cards.push(new Card(cardName, cardType));}
+        this.size += quantity;
+    }
+    draw() {
+        // TODO: Decide on a draw algorithm
+        // Temporarily, we'll use each card has twice the chance of being drawn as the previous card except the last two
+        let i = 0;
+        let choice = Math.random();
+        while(choice < 0.5 && ++i < this.size - 1) {
+            choice *= 2;
+        }
+        this.size--;
+        return this.cards.splice(i, 1)[0];
+    }
+}
+
 class Tile {
     // private terrain; // To be implemented later?
     public building: Building | null = null;
