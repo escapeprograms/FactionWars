@@ -66,7 +66,7 @@ export function filterLobby(lobby: Game): Game {
 
 // NOTE: THE FUNCTION BELOW HAS NOT BEEN TESTED (But hopefully should work properly)
 // Verifies lobby is ready for game start
-function verifyLobby(lobby: Game): boolean {
+export function verifyLobby(lobby: Game): boolean {
     const players = lobby.players;
     const factions: {[key: string]: boolean} = {};
     players.forEach(p=>factions[p.faction] = true);

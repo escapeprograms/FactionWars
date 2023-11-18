@@ -35,3 +35,15 @@ Building
 
 Game Flow
 Start game / Join Game > Choose factions & teams > Game starts automatically
+
+Game mechanics
+ - Turn end: All of your buildings get -1 building cooldown
+ - Turn start: Gain resources from your producers
+    - When you don't have enough energy, your buildings start shutting down (latest buildings first)
+
+Energy Implementation
+ - Each user (Player.PlayerStats)'s energy property tracks the current energy output
+ - When a building generates or stops generating energy, the user's energy property is changed accordingly
+ - If the user's energy output is ever less than energy usage, their buildings will be deactivated in order of last built
+
+ Note: It is difficult to send functions over sockets. Do not have a loop with objects that reference each other.
