@@ -269,17 +269,27 @@ socket.on("new-join", ({clientId, name}) => {
 
 socket.on("player-left-lobby", id => {
     const index = players.findIndex(player => player.id === id);
+    // Just in case
+    if (index < 0) {
+        console.log('ERROR!!!: Recieved "player-left-lobby" but could not find player!');
+    }
     players.splice(index, 1);
     updateUI();
 });
 
 socket.on("faction-change", ({clientId, faction}) => {
     const player = players.find(p => p.id === clientId);
+    if (!player) {
+        console.log('ERROR!!!: Recieved "faction" but could not find player!');
+    }
     player.changeFaction(faction);
 });
 
 socket.on("team-change", ({clientId, team}) => {
     const player = players.find(p => p.id === clientId);
+    if (!player) {
+        console.log('ERROR!!!: Recieved "faction" but could not find player!');
+    }    
     player.changeTeam(team);
 });
 
