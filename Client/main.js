@@ -33,14 +33,16 @@ class Rect {
 
 class Text {
     // x and y represent center
-    constructor(x, y, text) {
+    constructor(x, y, text, fontSize = 20) {
         this.x = x;
         this.y = y;
         this.text = text;
+        this.fontSize = fontSize;
     }
 
     draw() {
         context.fillStyle = "black";
+        context.font = this.fontSize + "px sans-serif";
         context.fillText(this.text, this.x, this.y);
     }
 }
