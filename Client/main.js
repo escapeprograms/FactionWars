@@ -1,5 +1,10 @@
 import { isValidName } from "./functions.js";
 
+const socket = io();
+
+let myId;
+socket.on("id", id => myId = id);
+
 const game = document.getElementById("game");
 const canvas = document.getElementById("canvas");
 const context = canvas.getContext("2d");
