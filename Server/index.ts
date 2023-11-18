@@ -25,12 +25,14 @@ io.on("connection", (socket: Socket) => {
         socket.disconnect(true);
     } else {
         if (!socketTable[socket.id]) {
+            const clientId = generateClientId();
             // Add socket to the table
             socketTable[socket.id] = {
                 state: SocketState.Menu,
-                clientId: generateClientId(),
+                clientId: clientId,
                 info: undefined
             }
+            socket.emit("id", clientId);
         } // else, should be a recovered user already in the table
     }
     socket.on("disconnect", (reason)=> {
