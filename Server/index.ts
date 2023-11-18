@@ -71,7 +71,7 @@ io.on("connection", (socket: Socket) => {
             socketTable[socket.id].state = SocketState.Lobby;
             socketTable[socket.id].info = {player: player, game: lobby};
             socket.join(lobby.id);
-            socket.emit("joined-lobby", filterLobby(lobby));
+            socket.emit("created-lobby", filterLobby(lobby));
             // Not emitting new-join because there shouldn't be anyone else in the lobby
         }
         else {
@@ -93,10 +93,10 @@ io.on("connection", (socket: Socket) => {
                 socketTable[socket.id].state = SocketState.Lobby;
                 socketTable[socket.id].info = {player: player, game: lobby};
                 socket.join(lobby.id);
-                socket.emit("joined-lobby", filterLobby(lobby))
+                socket.emit("lobby-join-result", true, filterLobby(lobby))
                 socket.to(lobbyId).emit("new-join", {name:name, clientId:socketTable[socket.id].clientId});
             } else {
-                socket.emit("join-error", result.value);
+                socket.emit("lobby-join-result", false, result.value);
             }
         } else {
             socket.emit("join-error", "invalid-name");
