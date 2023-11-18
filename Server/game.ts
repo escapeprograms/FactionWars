@@ -95,6 +95,7 @@ class GameInfo {
 
 class PlayerInfo {
     private cards: Card[] = [];
+    private deck: Deck = new Deck;
     public buildings: Building[] = [];
     private units: Unit[] = [];
     public money = 0;
