@@ -27,12 +27,14 @@ io.on("connection", (socket: Socket) => {
         socket.disconnect(true);
     } else {
         if (!socketTable[socket.id]) {
+            const clientId = generateClientId();
             // Add socket to the table
             socketTable[socket.id] = {
                 state: SocketState.Menu,
-                clientId: generateClientId(),
+                clientId: clientId,
                 info: undefined
             }
+            socket.emit("id", clientId);
         } // else, should be a recovered user already in the table
     }
     // This event is for testing only
@@ -79,7 +81,7 @@ io.on("connection", (socket: Socket) => {
             socketTable[socket.id].state = SocketState.Lobby;
             socketTable[socket.id].info = {player: player, game: lobby};
             socket.join(lobby.id);
-            socket.emit("joined-lobby", filterLobby(lobby));
+            socket.emit("created-lobby", filterLobby(lobby));
             // Not emitting new-join because there shouldn't be anyone else in the lobby
             console.log(socket.id + " has created a new game with id: " + lobby.id);//
         }
@@ -103,11 +105,11 @@ io.on("connection", (socket: Socket) => {
                 socketTable[socket.id].state = SocketState.Lobby;
                 socketTable[socket.id].info = {player: player, game: lobby};
                 socket.join(lobby.id);
-                socket.emit("joined-lobby", filterLobby(lobby))
+                socket.emit("lobby-join-result", true, filterLobby(lobby))
                 socket.to(lobbyId).emit("new-join", {name:name, clientId:socketTable[socket.id].clientId});
                 console.log(socket.id + " has successfully joined lobby " + lobby.id + " as " + name);//
             } else {
-                socket.emit("join-error", result.value);
+                socket.emit("lobby-join-result", false, result.value);
             }
         } else {
             socket.emit("join-error", "invalid-name");
