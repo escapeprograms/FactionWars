@@ -262,5 +262,26 @@ function joinLobby(name, code) {
     }
 }
 
+socket.on("new-join", ({clientId, name}) => {
+    players.push(new Player(clientId, name));
+    updateUI();
+});
+
+socket.on("player-left-lobby", id => {
+    const index = players.findIndex(player => player.id === id);
+    players.splice(index, 1);
+    updateUI();
+});
+
+socket.on("faction-change", ({clientId, faction}) => {
+    const player = players.find(p => p.id === clientId);
+    player.changeFaction(faction);
+});
+
+socket.on("team-change", ({clientId, team}) => {
+    const player = players.find(p => p.id === clientId);
+    player.changeTeam(team);
+});
+
 let screen = mainMenu;
 screen.draw();
