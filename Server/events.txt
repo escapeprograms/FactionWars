@@ -1,8 +1,8 @@
 Server Side Events:
-create game (from the menu)
-join game (from the menu)
-change team (inside the lobby)
-change faction (inside the lobby)
+create-game (from the menu, send name)
+join-game (from the menu, send name and lobby id)
+change-team (inside the lobby)
+change-faction (inside the lobby, send faction)
 start game
 play card (subcases: operation, building a building, deploying a unit)
 move unit
@@ -13,10 +13,11 @@ disconnect
 chat msg (later)
 
 Client Side Events:
+id (sends clientId on connection)
 dup-id (on connection, your socketId is already taken, please refresh your page to try again)
-joined-lobby (gives filtered lobby, tells client they have joined a lobby)
+created-lobby (gives filtered lobby, tells client they have created a lobby)
 create-error (tells client they have an error in creating a game)
-join-error (tells client they have an error in joining a game)
+lobby-join-result (gives boolean indicating success and either filtered lobby or error message)
 new-join (gives name and clientId, tells client that a new player joined their lobby)
 player-left-lobby (gives clientId, tells client that a player left their lobby)
 team-change-error (tells client they are not in the right state to change teams)
