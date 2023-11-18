@@ -1,8 +1,8 @@
 Server Side Events:
-create game (from the menu)
-join game (from the menu)
-change team (inside the lobby)
-change faction (inside the lobby)
+create-game (from the menu, send name)
+join-game (from the menu, send name and lobby id)
+change-team (inside the lobby)
+change-faction (inside the lobby, send faction)
 start game
 play card (subcases: operation, building a building, deploying a unit)
 move unit
