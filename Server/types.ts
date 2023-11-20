@@ -1,4 +1,4 @@
-import { PlayerInfo, GameState } from "./game.js";
+import { PlayerInfo, GameState, Card, BuildingStats, UnitStats } from "./game.js";
 
 export type Faction = "T" | "M" | "S" | "A";
 
@@ -60,3 +60,39 @@ export enum CardType {
 }
 
 export type Coordinate = [number, number];
+
+export type ClientGameState = {
+    turn: number,
+    // field (are we sending the field over?)
+    fieldSize: number,
+    players: {
+        id: string, // this should be the clientID
+        name: string
+        faction: Faction,
+        team: Team,
+        playerInfo: undefined | { // Undefined only when the game is not in progress
+            self: Coordinate,
+            cards: Card[] | number, // If hidden, transforms cards into number of cards
+            deck: number, // Deck size is sent instead of the deck itself
+            buildings: Coordinate[], // Top left corners of their buildings
+            units: Coordinate[], // Coordinates of their units
+            money: number,
+            energy: number, // Current energy available
+            totalEnergy: number // Total energy
+        }
+    }[][],
+    buildings: {
+        loc: Coordinate, // Coordinates of upper left tile
+        stats: BuildingStats,
+        owner: Coordinate, // [team, number] of player
+        health: number, // Current health
+        buildLeft: number, // Turns left for buildTime
+        active: boolean // Whether the building is active or inactive (disactivated)
+    }[],
+    units: {
+        tile: Coordinate,
+        stats: UnitStats,
+        owner: Coordinate, // [team, number] of player
+        health: number, // Current health
+    }[]
+}

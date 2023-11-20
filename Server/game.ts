@@ -1,4 +1,5 @@
-import { CardType, Player, Team, Coordinate, Game } from "./types.js";
+import { CardType, Player, Team, Coordinate, Game, ClientGameState } from "./types.js";
+import { socketTable } from "./users.js";
 import buildings from "./../Client/buildings.json" assert { type: "json" }; // See if this works or needs parsing
 import units from "./../Client/units.json" assert {type: "json"}; // See if this works or needs parsing
 
@@ -89,15 +90,22 @@ class GameState {
         return this.players[c[0]][c[1]];
     }
 
-    // Returns a copy of the game with player socketIds replaced by clientIds
-    /*clientCopy() {
-        const game = new Game();
-        game.players = this.players; //FIX TO BE DEEP COPY
-        game.turn = this.turn;
-        game.id = this.id;
-        game.field = this.field;
-        return game;
-    }*/
+    // Returns a ClientGameState for the specified client, if any
+    clientCopy(player?: Coordinate): ClientGameState {
+        return {
+            turn: this.turn,
+            fieldSize: this.fieldSize,
+            players: this.players.map(team=>team.map(p=>({
+                id: socketTable[p.id].clientId,
+                name: p.name,
+                faction: p.faction,
+                team: p.team,
+                playerInfo: p.playerInfo!.clientCopy(player)
+            }))), //TODO
+            buildings: this.buildings,
+            units: this.units
+        };
+    }
 }
 
 class PlayerInfo {
@@ -122,6 +130,18 @@ class PlayerInfo {
             }
         }
     }
+    clientCopy(player?: Coordinate) {
+        return {
+            self: this.self,
+            cards: player === this.self ? this.cards : this.cards.length,
+            deck: this.deck.size,
+            buildings: this.buildings,
+            units: this.units,
+            money: this.money,
+            energy: this.energy,
+            totalEnergy: this.totalEnergy
+        }
+    }
 }
 
 class Card {
@@ -139,7 +159,7 @@ class Card {
 class Deck {
     // TODO
     private cards: Card[] = [];
-    private size = 0; // Is this needed?
+    public size = 0; // Is this needed?
     constructor() {
         // Maybe add some stuff later
     }
@@ -192,10 +212,10 @@ type UnitStats  = {
 }
 
 class Unit {
-    private tile: Coordinate; // Change to coordinates
-    private stats: UnitStats;
-    private owner: Coordinate; // [team, number] of player
-    private health: number; // Current health
+    public tile: Coordinate;
+    public stats: UnitStats;
+    public owner: Coordinate; // [team, number] of player
+    public health: number; // Current health
     // Add team and/or faction property?
     constructor(tile: Coordinate, stats: UnitStats, player: Coordinate) {
         this.tile = tile;
@@ -218,14 +238,14 @@ type BuildingStats  = {
 }
 
 class Building {
-    private tiles: Coordinate; // Coordinates of upper left tile
+    public loc: Coordinate; // Coordinates of upper left tile
     public stats: BuildingStats;
     public owner: Coordinate; // [team, number] of player
-    private health: number; // Current health
-    private buildLeft: number; // Turns left for buildTime
-    private active: boolean = false; // Whether the building is active or inactive (disactivated)
-    constructor(game: GameState, tiles: Coordinate, stats: BuildingStats, player: Coordinate) {
-        this.tiles = tiles;
+    public health: number; // Current health
+    public buildLeft: number; // Turns left for buildTime
+    public active: boolean = false; // Whether the building is active or inactive (disactivated)
+    constructor(game: GameState, loc: Coordinate, stats: BuildingStats, player: Coordinate) {
+        this.loc = loc;
         this.stats = stats;
         this.owner = player;
         this.health = stats.maxHealth;
@@ -278,4 +298,4 @@ function compArr<T>(c1: T[], c2: T[]) {
     return c1.length === c2.length && c1.every((e, i)=>e === c2[i]);
 }
 
-export { GameState, PlayerInfo }; // Card, Tile, Field, UnitStats, BuildingStats, Unit, Building
+export { GameState, PlayerInfo, Card, BuildingStats, UnitStats }; // Tile, Field, Unit, Building
