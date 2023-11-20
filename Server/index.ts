@@ -7,7 +7,7 @@ import { socketTable, generateClientId } from "./users.js"
 import { isValidName } from "../Client/functions.js";
 import { createLobby, joinLobby, filterLobby, lobbyTable, verifyLobby } from "./lobby.js";
 import { SocketState, Faction, Game, Player } from "./types.js";
-import { PlayerInfo, GameInfo } from "./game.js"
+import { PlayerInfo, GameState } from "./game.js"
 
 const clientPath = path.resolve("Client")
 console.log("Serving static from " + clientPath);
@@ -40,7 +40,7 @@ io.on("connection", (socket: Socket) => {
     // This event is for testing only
     socket.on("test", (data)=> {
         const mkPlayer = () => ({id: 'a', name: 'a', faction: "T" as Faction, team: 0, playerInfo: undefined});
-        const a = new GameInfo([mkPlayer(), mkPlayer(), mkPlayer(), mkPlayer()]);
+        const a = new GameState([mkPlayer(), mkPlayer(), mkPlayer(), mkPlayer()]);
         console.log(a);
     });
     socket.on("disconnect", (reason)=> {
@@ -170,7 +170,7 @@ io.on("connection", (socket: Socket) => {
                     p.playerInfo = new PlayerInfo() // Possibly add arguments later
                     socketTable[p.id].state = SocketState.Game; // socketTable[p.id] should never be undefined
                 }); 
-                game.gameInfo = new GameInfo(game.players); // Possibly add arguments later
+                game.gameInfo = new GameState(game.players); // Possibly add arguments later
                 game.started = true;
                 // Do other start game stuff and send message
                 io.to(game.id).emit("game-start", filterLobby(game)); // So that initial socket receives message as well

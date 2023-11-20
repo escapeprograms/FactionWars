@@ -142,7 +142,7 @@ const createPrompt = new Composite([
 ]);
 
 const joinPrompt = (() => {
-    const onEnter = () => joinLobby(nameInput.element.value, codeInput.element.value);
+    const onEnter = () => joinLobby(nameInput.element.value, codeInput.element.value.toUpperCase()); // also a string
     const nameInput = textInput(300, 200, 10, "Name", onEnter);
     const codeInput = textInput(300, 400, 10, "Code", onEnter);
     return new Composite([

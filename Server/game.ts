@@ -2,11 +2,11 @@ import { CardType, Player, Team } from "./types.js";
 import buildings from "./../Client/buildings.json" assert { type: "json" }; // See if this works or needs parsing
 import units from "./../Client/units.json" assert {type: "json"}; // See if this works or needs parsing
 
-class GameInfo {
+class GameState {
     private turn: Team = 0;
     private field: Tile[][] = []; // [0][0] is top left corner. [x] moves right, [y] moves down
     private fieldSize: number // Not sure if this is necessary
-    private players: Player[][] = [[], []];
+    private players: [Player[], Player[]] = [[], []]; // [Team0Players, Team1Players]
 
     constructor (players: Player[], fieldSize=50) {
         players.forEach(p=>this.players[p.team].push(p));
@@ -20,7 +20,7 @@ class GameInfo {
         for (let i = 0; i < size; i++) {
             const row = [];
             for (let j = 0; j < size; j++) {
-                row.push(new Tile());
+                row.push(new Tile([i, j]));
             }
             this.field.push(row);
         }
@@ -44,7 +44,7 @@ class GameInfo {
             doubleIt((i, j)=>tiles.push(obj.field[i][j]), x, y, x+building.size, y+building.size);
             const b = new Building(tiles, building, owner);
             owner.playerInfo!.buildings.push(b); // Assumes playerinfo is not null
-            tiles.forEach(t=>t.build(b));
+            tiles.forEach(t=>t.occupant = b);
             // Maybe add stuff for build time?
             return b;
         } else  {
@@ -60,7 +60,7 @@ class GameInfo {
         let valid = true;
         const obj = this;
         doubleIt((i, j)=>{
-            if (obj.field[i][j].occupied) valid = false;
+            if (obj.field[i][j].occupant) valid = false;
         }, x, y, x+size, y+size);
         return valid;
     }
@@ -95,11 +95,12 @@ class GameInfo {
 
 class PlayerInfo {
     private cards: Card[] = [];
-    private deck: Deck = new Deck;
+    private deck: Deck = new Deck();
     public buildings: Building[] = [];
     private units: Unit[] = [];
     public money = 0;
-    public energy = 0; // Current energy output
+    public energy = 0; // Current energy available
+    public totalEnergy = 0; // Total energy
     constructor() {
 
     }
@@ -115,11 +116,13 @@ class PlayerInfo {
 }
 
 class Card {
-    private name: string
+    private id: string // internal identifier
     private type: CardType
-    constructor(name: string, type: CardType) {
-        this.name = name;
+    private cost: number // cost in money
+    constructor(id: string, type: CardType, cost: number) {
+        this.id = id;
         this.type = type;
+        this.cost = cost;
     }
 }
 
@@ -139,16 +142,18 @@ class Deck {
     }
     add(cardName: string, cardType: CardType, quantity: number) {
         // Update parameters later as card constructor changes
-        for (let i = 0; i < quantity; i++) {this.cards.push(new Card(cardName, cardType));}
+        for (let i = 0; i < quantity; i++) {this.cards.push(new Card(cardName, cardType, 0));}
         this.size += quantity;
     }
     draw() {
         // TODO: Decide on a draw algorithm
         // Temporarily, we'll use each card has twice the chance of being drawn as the previous card except the last two
+        if (this.size === 0) return undefined;
         let i = 0;
         let choice = Math.random();
-        while(choice < 0.5 && ++i < this.size - 1) {
+        while(choice < 0.5 && i < this.size - 1) {
             choice *= 2;
+            i++;
         }
         this.size--;
         return this.cards.splice(i, 1)[0];
@@ -157,12 +162,10 @@ class Deck {
 
 class Tile {
     // private terrain; // To be implemented later?
-    public building: Building | null = null;
-    public unit: Unit | null = null;
-    public occupied = false; // Equivalent to building or unit not null
-    build(b: Building) {
-        this.building = b;
-        this.occupied = true;
+    public loc: [number, number];
+    public occupant: Building | Unit | null = null; // null = unoccupied
+    constructor(loc: [number, number]) {
+        this.loc = loc;
     }
 }
 
@@ -260,4 +263,4 @@ class Building {
     }
 }
 
-export { GameInfo, PlayerInfo } // Card, Tile, Field, UnitStats, BuildingStats, Unit, Building
+export { GameState, PlayerInfo } // Card, Tile, Field, UnitStats, BuildingStats, Unit, Building

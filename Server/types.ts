@@ -1,4 +1,4 @@
-import { PlayerInfo, GameInfo } from "./game.js";
+import { PlayerInfo, GameState } from "./game.js";
 
 export type Faction = "T" | "M" | "S" | "A";
 
@@ -31,7 +31,7 @@ export type Game = {
     players: Player[],
     id: string,
     started: boolean // Same as gameInfo === undefined
-    gameInfo: undefined | GameInfo // Undefined while it is a lobby
+    gameInfo: undefined | GameState // Undefined while it is a lobby
 };
 
 export type Result<T, U> = {
