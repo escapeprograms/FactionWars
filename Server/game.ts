@@ -2,6 +2,7 @@ import { CardType, Player, Team, Coordinate, Game, ClientGameState } from "./typ
 import { socketTable } from "./users.js";
 import buildings from "./../Client/buildings.json" assert { type: "json" }; // See if this works or needs parsing
 import units from "./../Client/units.json" assert {type: "json"}; // See if this works or needs parsing
+import cards from "./../Client/cards.json" assert {type: "json"}; // See if this works or needs parsing
 
 class GameState {
     public turn: Team = 0;

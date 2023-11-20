@@ -1,0 +1,26 @@
+{
+    "template": {
+        "name":"template | order card entries by faction, then name",
+        "faction": "N for neutral",
+        "cardType": "U or B or O",
+        "cost": 0,
+        "effect": {},
+        "other_stuff_here": "some_value_here"
+    },
+
+    "power plant": {
+        "name": "Power Plant",
+        "faction": "N",
+        "cardType": "B",
+        "cost": 2,
+        "effect": {
+            "spawn": {
+                "type": "building",
+                "id": "power plant"
+            }
+        },
+        "other_stuff_here": "decide later"
+
+    }
+
+}
