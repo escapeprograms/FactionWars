@@ -167,7 +167,7 @@ io.on("connection", (socket: Socket) => {
                 // Start the game
                 // TODO
                 game.players.forEach(p=>{
-                    p.playerInfo = new PlayerInfo() // Possibly add arguments later
+                    p.playerInfo = new PlayerInfo([-1, -1]) // Coordinates will be changed when GameState is constructed
                     socketTable[p.id].state = SocketState.Game; // socketTable[p.id] should never be undefined
                 }); 
                 game.gameInfo = new GameState(game.players); // Possibly add arguments later

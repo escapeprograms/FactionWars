@@ -47,3 +47,5 @@ Energy Implementation
  - If the user's energy output is ever less than energy usage, their buildings will be deactivated in order of last built
 
  Note: It is difficult to send functions over sockets. Do not have a loop with objects that reference each other.
+ In order to facilitate that, we are removing circular and duplicate references within Players and GameStates.
+ When storing or sending a game, we ignore the Game class and instead just serialize the GameState class.

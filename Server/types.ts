@@ -58,3 +58,5 @@ export enum CardType {
     Building = "B",
     Operation = "O"
 }
+
+export type Coordinate = [number, number];

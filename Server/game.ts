@@ -1,15 +1,20 @@
-import { CardType, Player, Team } from "./types.js";
+import { CardType, Player, Team, Coordinate, Game } from "./types.js";
 import buildings from "./../Client/buildings.json" assert { type: "json" }; // See if this works or needs parsing
 import units from "./../Client/units.json" assert {type: "json"}; // See if this works or needs parsing
 
 class GameState {
-    private turn: Team = 0;
-    private field: Tile[][] = []; // [0][0] is top left corner. [x] moves right, [y] moves down
-    private fieldSize: number // Not sure if this is necessary
-    private players: [Player[], Player[]] = [[], []]; // [Team0Players, Team1Players]
+    public turn: Team = 0;
+    public field: Tile[][] = []; // [0][0] is top left corner. [x] moves right, [y] moves down
+    public fieldSize: number // For convenience, and assuming square fields
+    public players: [Player[], Player[]] = [[], []]; // [Team0Players, Team1Players]
+    public buildings: Building[] = []; // Contains the only references to in play buildings
+    public units: Unit[] = []; // Contains the only references to in play units
 
     constructor (players: Player[], fieldSize=50) {
-        players.forEach(p=>this.players[p.team].push(p));
+        players.forEach(p=>{
+            p.playerInfo!.self = [p.team, this.players[p.team].length];
+            this.players[p.team].push(p)
+        });
         this.fieldSize = fieldSize;
         this.setField(fieldSize);
     }
@@ -20,7 +25,7 @@ class GameState {
         for (let i = 0; i < size; i++) {
             const row = [];
             for (let j = 0; j < size; j++) {
-                row.push(new Tile([i, j]));
+                row.push(new Tile());
             }
             this.field.push(row);
         }
@@ -30,21 +35,19 @@ class GameState {
         // TODO: Fix later: Right now, assumes there is enough space for the HQs
         if (size < stats.size * 2 ) {throw new Error("field too small");}
         const obj = this;
-        doubleIt((i, j) => obj.spawnBuilding(stats, i * (size - stats.size), j * (size - stats.size), obj.players[i][j]), 0, 0, 1, 1);
+        doubleIt((i, j) => obj.spawnBuilding(stats, i * (size - stats.size), j * (size - stats.size), [i, j]), 0, 0, 1, 1);
         
     }
 
     // Spawns a building with its top left corner at (x, y)
     // Not sure what to return if invalid
-    spawnBuilding(building: BuildingStats, x:number, y:number, owner: Player): Building | null {
+    spawnBuilding(building: BuildingStats, x:number, y:number, owner: Coordinate): Building | null {
         // Verify placement
         if (this.verifyPlacement(building.size, x, y)) {
-            const tiles: Tile[] = [];
-            const obj = this;
-            doubleIt((i, j)=>tiles.push(obj.field[i][j]), x, y, x+building.size, y+building.size);
-            const b = new Building(tiles, building, owner);
-            owner.playerInfo!.buildings.push(b); // Assumes playerinfo is not null
-            tiles.forEach(t=>t.occupant = b);
+            doubleIt((i, j)=>this.field[i][j].occupant = [x, y], x, y, x+building.size, y+building.size);
+            this.getPlayer(owner).playerInfo!.buildings.push([x, y]); // Assumes playerinfo is not null
+            const b = new Building(this, [x, y], building, owner);
+            this.buildings.push(b);
             // Maybe add stuff for build time?
             return b;
         } else  {
@@ -67,7 +70,7 @@ class GameState {
 
     endTurn() {
         // Activate end of turn effects, as applicable
-        this.players[this.turn].forEach(p=>p.playerInfo!.buildings.forEach(b=>b.endTurn())); // Assumes playerInfo is not null
+        this.buildings.forEach(b=>b.endTurn(this));
         this.turn = 1 - this.turn;
         // call startTurn() here?
     }
@@ -78,8 +81,12 @@ class GameState {
         // Deactivate buildings?
         // Generate money and other effects
         // TODO
-        this.players[this.turn].forEach(p=>p.playerInfo!.buildings.forEach(b=>b.startTurn())); // Assumes playerInfo is not null
+       //this.players[this.turn].forEach(p=>p.playerInfo!.buildings.forEach(b=>b.startTurn())); // Assumes playerInfo is not null
         // Start timer?
+    }
+
+    getPlayer(c: Coordinate) {
+        return this.players[c[0]][c[1]];
     }
 
     // Returns a copy of the game with player socketIds replaced by clientIds
@@ -94,22 +101,24 @@ class GameState {
 }
 
 class PlayerInfo {
+    public self: Coordinate;
     private cards: Card[] = [];
     private deck: Deck = new Deck();
-    public buildings: Building[] = [];
-    private units: Unit[] = [];
+    public buildings: Coordinate[] = []; // Top left corners of their buildings
+    private units: Coordinate[] = []; // Coordinates of their units
     public money = 0;
     public energy = 0; // Current energy available
     public totalEnergy = 0; // Total energy
-    constructor() {
-
+    constructor(self: Coordinate) {
+        this.self = self;
     }
     // Deactivates buildings until energy is nonnegative
-    upkeep() {
-        let i = this.buildings.length;
+    // Pass in game.buildings
+    upkeep(buildings: Building[]) {
+        let i = buildings.length;
         while (this.energy < 0) {
-            if (this.buildings[--i].stats.upkeep > 0) {
-                this.buildings[i].deactivate();
+            if (compArr(this.self, buildings[--i].owner) && buildings[i].stats.upkeep > 0) {
+                buildings[i].deactivate(this);
             }
         }
     }
@@ -119,6 +128,7 @@ class Card {
     private id: string // internal identifier
     private type: CardType
     private cost: number // cost in money
+    // Other properties for their effects
     constructor(id: string, type: CardType, cost: number) {
         this.id = id;
         this.type = type;
@@ -162,18 +172,10 @@ class Deck {
 
 class Tile {
     // private terrain; // To be implemented later?
-    public loc: [number, number];
-    public occupant: Building | Unit | null = null; // null = unoccupied
-    constructor(loc: [number, number]) {
-        this.loc = loc;
-    }
-}
-
-function doubleIt(f: (i: number, j: number)=>void, x:number, y:number, xEnd:number, yEnd:number) {
-    for (let i = x; i < xEnd; i++) {
-        for (let j = y; j < yEnd; j++) {
-            f(i, j);
-        }
+    // public loc: [number, number]; // Don't need that
+    public occupant: Coordinate | null = null; // Coordinate of occupant or null if unoccupied
+    constructor() {
+        // If needed?
     }
 }
 
@@ -190,12 +192,12 @@ type UnitStats  = {
 }
 
 class Unit {
-    private tile: Tile;
+    private tile: Coordinate; // Change to coordinates
     private stats: UnitStats;
-    private owner: Player;
+    private owner: Coordinate; // [team, number] of player
     private health: number; // Current health
     // Add team and/or faction property?
-    constructor(tile: Tile, stats: UnitStats, player: Player) {
+    constructor(tile: Coordinate, stats: UnitStats, player: Coordinate) {
         this.tile = tile;
         this.stats = stats;
         this.owner = player;
@@ -216,51 +218,64 @@ type BuildingStats  = {
 }
 
 class Building {
-    private tiles: Tile[];
+    private tiles: Coordinate; // Coordinates of upper left tile
     public stats: BuildingStats;
-    private owner: Player;
+    public owner: Coordinate; // [team, number] of player
     private health: number; // Current health
     private buildLeft: number; // Turns left for buildTime
-    private active: boolean; // Whether the building is active or inactive (disactivated)
-    constructor(tiles: Tile[], stats: BuildingStats, player: Player) {
+    private active: boolean = false; // Whether the building is active or inactive (disactivated)
+    constructor(game: GameState, tiles: Coordinate, stats: BuildingStats, player: Coordinate) {
         this.tiles = tiles;
         this.stats = stats;
         this.owner = player;
         this.health = stats.maxHealth;
         this.buildLeft = stats.buildTime;
-        this.active = this.buildLeft === 0;
-        if (this.active && stats.energyGen > 0) {player.playerInfo!.energy += stats.energyGen;}
+        this.activate(game.getPlayer(player).playerInfo!);
     }
-    endTurn() {
+    // Takes in the GameState
+    endTurn(game: GameState) {
         // Decrement construction time
         if (this.buildLeft > 0) {
-            /*if(--this.buildLeft === 0 && this.owner.playerInfo!.energy >= this.stats.upkeep) {
-                this.owner.playerInfo!.energy -= this.stats.upkeep;
-                this.active = true;
-            }*/
-            this.buildLeft--;
-            this.activate();
+            if (--this.buildLeft === 0) {
+                this.activate(game.getPlayer(this.owner).playerInfo!);
+            }
         }
-        // Maybe more stuff here, as applicable
+        // Maybe more stuff here, such as end of tern effects, as applicable
     }
     startTurn() {
         // Generate, if active
         // TODO
     }
     // Returns whether or not it is active
-    activate(): boolean {
-        if (!this.active && this.buildLeft === 0 && this.stats.upkeep <= this.owner.playerInfo!.energy) {
-            this.owner.playerInfo!.energy += this.stats.energyGen - this.stats.upkeep;
+    // Pass in owner's PlayerInfo
+    activate(owner: PlayerInfo): boolean {
+        if (!this.active && this.buildLeft === 0 && this.stats.upkeep <= owner.energy) {
+            owner.energy += this.stats.energyGen - this.stats.upkeep;
+            owner.totalEnergy += this.stats.energyGen;
             this.active = true;
         }
         return this.active;
     }
-    deactivate() {
+    // Pass in owner's PlayerInfo
+    deactivate(owner: PlayerInfo) {
         if (this.active) {
-            this.owner.playerInfo!.energy -= this.stats.energyGen - this.stats.upkeep;
+            owner.energy -= this.stats.energyGen - this.stats.upkeep;
+            owner.totalEnergy -= this.stats.energyGen;
             this.active = false;
         }
     }
 }
 
-export { GameState, PlayerInfo } // Card, Tile, Field, UnitStats, BuildingStats, Unit, Building
+function doubleIt(f: (i: number, j: number)=>void, x:number, y:number, xEnd:number, yEnd:number) {
+    for (let i = x; i < xEnd; i++) {
+        for (let j = y; j < yEnd; j++) {
+            f(i, j);
+        }
+    }
+}
+
+function compArr<T>(c1: T[], c2: T[]) {
+    return c1.length === c2.length && c1.every((e, i)=>e === c2[i]);
+}
+
+export { GameState, PlayerInfo }; // Card, Tile, Field, UnitStats, BuildingStats, Unit, Building
