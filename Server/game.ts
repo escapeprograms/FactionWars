@@ -79,11 +79,7 @@ class GameState {
 
     startTurn() {
         // Activate start of turn effects, as applicable
-        // Generate energy
-        // Deactivate buildings?
-        // Generate money and other effects
-        // TODO
-       //this.players[this.turn].forEach(p=>p.playerInfo!.buildings.forEach(b=>b.startTurn())); // Assumes playerInfo is not null
+        this.buildings.forEach(b=>b.startTurn(this.getPlayer(b.owner).playerInfo!));
         // Start timer?
     }
 
@@ -263,9 +259,12 @@ class Building {
         }
         // Maybe more stuff here, such as end of tern effects, as applicable
     }
-    startTurn() {
+    startTurn(owner: PlayerInfo) {
         // Generate, if active
-        // TODO
+        if(this.active) {
+            owner.money += this.stats.moneyGen;
+            // Maybe other effects here
+        }
     }
     // Returns whether or not it is active
     // Pass in owner's PlayerInfo
