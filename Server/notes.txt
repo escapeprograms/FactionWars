@@ -46,6 +46,25 @@ Energy Implementation
  - When a building generates or stops generating energy, the user's energy property is changed accordingly
  - If the user's energy output is ever less than energy usage, their buildings will be deactivated in order of last built
 
+Units
+ - Movement
+    - Each unit may be commanded to move once per turn and attack once per turn (unless otherwise specified)
+    - The client will send the server an array of steps as a move
+    - If a step causes a unit to detect an invisible unit, the unit stops and may be commanded to move again
+    - Speed is the number of steps a unit can take each turn. Detecting an invisible unit does not replenish this.
+    - Units move taxicab-wise. That is to say, they can move up, down, left, right but not diagonally.
+ - Range
+    - Unit range uses euclidean distance, from the center of their tile to the center of the target tile
+    - Melee units have range 1 or 1.5, depending on whether or not they can target diagonally.
+ - Line-of-sight
+    - Units and buildings block line of sight. In the future, some terrain might also do so.
+    - Draw line from center of source tile to center of target tile. If the line intersects
+      any square that blocks line of sight, then line of sight is blocked.
+       - If the line passes through a corner, then the corner must be blocked on both sides
+         in order to block line of sight.
+ - Sight (for purposes of fog of war, which is not currently implemented)
+    - Uses euclidean distance & line of sight
+
  Note: It is difficult to send functions over sockets. Do not have a loop with objects that reference each other.
  In order to facilitate that, we are removing circular and duplicate references within Players and GameStates.
  When storing or sending a game, we ignore the Game class and instead just serialize the GameState class.
