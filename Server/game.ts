@@ -128,13 +128,13 @@ class GameState {
         let [x, y] = source;
         let valid = true;
         const check = () => {if (this.field[x][y].occupant && (x !== target[0] || y !== target[1])) valid = false;};
-        const goRight = () => { x += xdir; i++};
-        const goUp = () => { y += ydir; j++};
-        while (i < right.length && j < up.length) {
-            if (i === right.length) goUp();
-            else if (j === up.length) goRight();
-            else if (right[i] < up[j]) goRight();
-            else if (right[i] > up[j]) goUp();
+        const goHori = () => { x += xdir; i++};
+        const goVert = () => { y += ydir; j++};
+        while (i < right.length || j < up.length) {
+            if (i === right.length) goVert();
+            else if (j === up.length) goHori();
+            else if (right[i] < up[j]) goHori();
+            else if (right[i] > up[j]) goVert();
             else { // Corner
                 if (this.field[x+xdir][y].occupant && this.field[x][y+ydir].occupant) valid = false;
                 x += xdir;
