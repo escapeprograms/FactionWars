@@ -103,6 +103,49 @@ class GameState {
             units: this.units
         };
     }
+    
+    /* 
+     * Returns whether or not there is line of sight between the source and the target.
+     * Source and Target do not block line of sight
+     * Currently, all buildings and units block line of sight
+     * Corners require two squares of the corner to be blocked to block line of sight
+     */
+    sight(source: Coordinate, target: Coordinate): boolean {
+        const dx = Math.abs(target[0] - source[0]);
+        const dy = Math.abs(target[1] - source[1]);
+        const xdir = target[0] - source[0] > 0 ? 1 : -1; // Assumes this won't be used if it is 0
+        const ydir = target[1] - source[1] > 0 ? 1 : -1; // Assumes this won't be used if it is 0
+        const right = [];
+        for (let x = 0.5; x < dx; x++) {
+            right.push(x * dy / dx);
+        }
+        const up = [];
+        for (let y = 0.5; y < dy; y++) {
+            up.push(y);
+        }
+        let i = 0;
+        let j = 0;
+        let [x, y] = source;
+        let valid = true;
+        const check = () => {if (this.field[x][y].occupant && (x !== target[0] || y !== target[1])) valid = false;};
+        const goRight = () => { x += xdir; i++};
+        const goUp = () => { y += ydir; j++};
+        while (i < right.length && j < up.length) {
+            if (i === right.length) goUp();
+            else if (j === up.length) goRight();
+            else if (right[i] < up[j]) goRight();
+            else if (right[i] > up[j]) goUp();
+            else { // Corner
+                if (this.field[x+xdir][y].occupant && this.field[x][y+ydir].occupant) valid = false;
+                x += xdir;
+                y += ydir;
+                i++;
+                j++;
+            }
+            check();
+        }
+        return valid;
+    }
 }
 
 class PlayerInfo {
@@ -219,6 +262,12 @@ class Unit {
         this.stats = stats;
         this.owner = player;
         this.health = stats.maxHealth;
+    }
+    startTurn() {
+        // Do start turn stuff here, if any
+    }
+    endTurn() {
+        // Do end turn stuff here, if any
     }
 }
 
