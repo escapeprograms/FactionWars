@@ -19,6 +19,7 @@ class GameState {
         });
         this.fieldSize = fieldSize;
         this.setField(fieldSize);
+        //this.setup(); // TODO: Give cards to each player
     }
 
     setField(size: number) {
@@ -73,6 +74,7 @@ class GameState {
     endTurn() {
         // Activate end of turn effects, as applicable
         this.buildings.forEach(b=>b.endTurn(this));
+        this.units.forEach(u=>u.startTurn()); // Currently does nothing
         this.turn = 1 - this.turn;
         // call startTurn() here?
     }
@@ -80,11 +82,16 @@ class GameState {
     startTurn() {
         // Activate start of turn effects, as applicable
         this.buildings.forEach(b=>b.startTurn(this.getPlayer(b.owner).playerInfo!));
+        this.units.forEach(u=>u.startTurn());
         // Start timer?
     }
 
     getPlayer(c: Coordinate) {
         return this.players[c[0]][c[1]];
+    }
+    // Oh no, code duplication!?!
+    getTile(c: Coordinate) {
+        return this.field[c[0]][c[1]];
     }
 
     // Returns a ClientGameState for the specified client, if any
@@ -98,7 +105,7 @@ class GameState {
                 faction: p.faction,
                 team: p.team,
                 playerInfo: p.playerInfo!.clientCopy(player)
-            }))), //TODO
+            }))),
             buildings: this.buildings,
             units: this.units
         };
@@ -197,7 +204,6 @@ class Card {
 }
 
 class Deck {
-    // TODO
     private cards: Card[] = [];
     public size = 0; // Is this needed?
     constructor() {
@@ -256,6 +262,8 @@ class Unit {
     public stats: UnitStats;
     public owner: Coordinate; // [team, number] of player
     public health: number; // Current health
+    public steps = 0; // # of steps available
+    public moves = 0; // # of times left the player can move the unit
     // Add team and/or faction property?
     constructor(tile: Coordinate, stats: UnitStats, player: Coordinate) {
         this.tile = tile;
@@ -265,9 +273,30 @@ class Unit {
     }
     startTurn() {
         // Do start turn stuff here, if any
+        this.steps = this.stats.speed;
+        this.moves = 1;
     }
     endTurn() {
         // Do end turn stuff here, if any
+    }
+    move(game: GameState, steps: Coordinate[]) {
+        if (this.moves < 1) return; // Possibly modify this later?
+        this.moves--; // Possibly modify this later?
+        steps = [...steps]; // Avoid modifying parameters
+        while (this.steps > 0 && steps.length > 0) {
+            let step = steps[0];
+            if (this.isAdj(step) && !game.getTile(step).occupant) {
+                steps.shift();
+                this.steps--;
+                this.tile = step;
+                // Add in invisible unit detection things here
+            } else {
+                return; // invalid step
+            }
+        }
+    }
+    isAdj(loc: Coordinate): boolean {
+        return loc[0] % 1 === 0 && loc[1] % 1 === 0 && (Math.abs(loc[0] - this.tile[0]) + Math.abs(loc[1] - this.tile[1]) === 1);
     }
 }
 

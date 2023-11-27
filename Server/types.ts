@@ -94,5 +94,7 @@ export type ClientGameState = {
         stats: UnitStats,
         owner: Coordinate, // [team, number] of player
         health: number, // Current health
+        steps: number,
+        moves: number
     }[]
 }
