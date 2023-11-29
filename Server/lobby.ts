@@ -60,7 +60,7 @@ export function filterLobby(lobby: Game): Game {
         }}),
         id: lobby.id,
         started: lobby.started,
-        gameInfo: lobby.gameInfo
+        gameInfo: lobby.gameInfo // DOES NOT FILTER GAMESTATE!
     };
 }
 
@@ -71,6 +71,6 @@ export function verifyLobby(lobby: Game): boolean {
     const factions: {[key: string]: boolean} = {};
     players.forEach(p=>factions[p.faction] = true);
     // 4 users, unique factions, 2 users per team
-    // Does not verify that the lobby is not an already started game
+    // DOES NOT VERIFY THAT THE LOBBY IS NOT AN ALREADY STARTED GAME
     return players.length === 4 && Object.keys(factions).length === 4 && players.reduce((acc, e)=>acc + e.team, 0) === 2;
 }

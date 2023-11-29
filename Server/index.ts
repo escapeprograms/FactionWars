@@ -165,15 +165,15 @@ io.on("connection", (socket: Socket) => {
                 socket.emit("game-start-error", "not-host");
             } else if(verifyLobby(game)) {
                 // Start the game
-                // TODO
                 game.players.forEach(p=>{
                     p.playerInfo = new PlayerInfo([-1, -1]) // Coordinates will be changed when GameState is constructed
                     socketTable[p.id].state = SocketState.Game; // socketTable[p.id] should never be undefined
                 }); 
                 game.gameInfo = new GameState(game.players); // Possibly add arguments later
                 game.started = true;
-                // Do other start game stuff and send message
-                io.to(game.id).emit("game-start", filterLobby(game)); // So that initial socket receives message as well
+                const socks = io.sockets.sockets;
+                // Send specialized GameState to each player
+                game.players.forEach(p=>socks.get(p.id)?.emit("game-start", game.gameInfo!.clientCopy(p.playerInfo!.self))) // TODO: Test
                 console.log(socket.id + " has started game: " + game.id);//
             } else {
                 socket.emit("game-start-error", "invalid-lobby");
