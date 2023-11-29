@@ -38,7 +38,7 @@ class GameState {
         // TODO: Fix later: Right now, assumes there is enough space for the HQs
         if (size < stats.size * 2 ) {throw new Error("field too small");}
         const obj = this;
-        doubleIt((i, j) => obj.spawnBuilding(stats, i * (size - stats.size), j * (size - stats.size), [i, j]), 0, 0, 1, 1);
+        doubleIt((i, j) => obj.spawnBuilding(stats, i * (size - stats.size), j * (size - stats.size), [i, j]), 0, 0, 2, 2);
         
     }
 
