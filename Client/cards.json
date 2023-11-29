@@ -1,11 +1,30 @@
 {
-    "template": {
+    "template-of-operation": {
         "name":"template | order card entries by faction, then name",
         "faction": "N for neutral",
         "cardType": "U or B or O",
         "cost": 0,
-        "effect": {},
-        "other_stuff_here": "some_value_here"
+        "targets": [
+            {"name": "$var", "type": "tile", "properties": {
+                    "unoccupied": true,
+                    "next-to-building": true,
+                    "with-health-at-least": 5,
+                    "circle": 3
+                }
+            },
+            {"name": "$annoyance", "type": "choice", "properties": {
+                "choices": ["choice1", "choice2", "choice3"]
+            }
+            }
+        ],
+        "effect": {
+            "spawn": {
+                "type": "unit",
+                "id": "footsoldier",
+                "loc": "$var"
+            }
+        },
+        "potentially_other_stuff_here": "some_value_here"
     },
 
     "power plant": {
@@ -13,14 +32,25 @@
         "faction": "N",
         "cardType": "B",
         "cost": 2,
-        "effect": {
-            "spawn": {
-                "type": "building",
-                "id": "power plant"
-            }
-        },
-        "other_stuff_here": "decide later"
+        "targets": [{"name": "$loc", "type": "tile", "properties": {"buildable": true}}],
+        "spawn": {
+            "id": "power plant",
+            "loc": "$loc",
+            "modifiers": []
+        }
+    },
 
+    "footsoldier": {
+        "name": "Footsoldier",
+        "faction": "N",
+        "cardType": "U",
+        "cost": 1,
+        "targets": [{"name": "$loc", "type": "tile", "properties": {"next-to-hq": true}}],
+        "spawn": {
+            "id": "footsoldier",
+            "loc": "$loc",
+            "modifiers": []
+        }
     }
 
 }

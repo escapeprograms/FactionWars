@@ -1,4 +1,4 @@
-import { CardType, Player, Team, Coordinate, Game, ClientGameState } from "./types.js";
+import { CardType, Player, Team, Coordinate, Game, ClientGameState, Faction } from "./types.js";
 import { socketTable } from "./users.js";
 import buildings from "./../Client/buildings.json" assert { type: "json" }; // See if this works or needs parsing
 import units from "./../Client/units.json" assert {type: "json"}; // See if this works or needs parsing
@@ -191,17 +191,63 @@ class PlayerInfo {
     }
 }
 
-class Card {
-    private id: string // internal identifier
-    private type: CardType
-    private cost: number // cost in money
-    // Other properties for their effects
-    constructor(id: string, type: CardType, cost: number) {
-        this.id = id;
-        this.type = type;
-        this.cost = cost;
+type Card = {
+    name: string, // internal identifier
+    faction: Faction | "N", // Faction this belongs to, or "N" for Neutral
+    cardType: CardType.Unit | CardType.Building, // Building | Unit | Operation
+    cost: number, // cost in money
+    targets: [{
+        name: string, // beginning with $
+        type: string, // tile/unit/building/player/card etc.
+        properties: {
+            [key: string]: boolean | number | string // Modify in the future as needed
+        }
+    }]
+    spawn: {
+        // type: "unit", // Implied
+        id: string,
+        loc: string,
+        modifiers: {
+            [key: string]: any
+        }[]
     }
-}
+}/*   | {
+    name: string, // internal identifier
+    faction: Faction | "N", // Faction this belongs to, or "N" for Neutral
+    cardType: CardType.Building, // Building | Unit | Operation
+    cost: number, // cost in money
+    targets: [{
+        name: string, // beginning with $
+        type: string, // tile/unit/building/player/card etc.
+        properties: {
+            [key: string]: boolean | number | string // Modify in the future as needed
+        }
+    }]
+    spawn: {
+        // type: "building", // Implied
+        id: string,
+        loc: string,
+        modifiers: {
+            [key: string]: any
+        }[]
+    }
+}*/   | {
+    name: string, // internal identifier
+    faction: Faction | "N", // Faction this belongs to, or "N" for Neutral
+    cardType: CardType.Operation, // Building | Unit | Operation
+    cost: number, // cost in money
+    targets: {
+        name: string, // beginning with $
+        type: string, // tile/unit/building/player/card etc.
+        properties: {
+            [key: string]: boolean | number | string // Modify in the future as needed
+        }
+    }[]
+    effects: {
+        effect: string,
+        [key: string]: any
+    }[]
+};
 
 class Deck {
     private cards: Card[] = [];
@@ -216,9 +262,9 @@ class Deck {
             [this.cards[i], this.cards[temp]] = [this.cards[temp], this.cards[i]];
         }
     }
-    add(cardName: string, cardType: CardType, quantity: number) {
+    add(card: Card, quantity: number) {
         // Update parameters later as card constructor changes
-        for (let i = 0; i < quantity; i++) {this.cards.push(new Card(cardName, cardType, 0));}
+        for (let i = 0; i < quantity; i++) {this.cards.push(card);}
         this.size += quantity;
     }
     draw() {
