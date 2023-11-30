@@ -1,8 +1,8 @@
 import { CardType, Player, Team, Coordinate, Game, ClientGameState, Faction } from "./types.js";
 import { socketTable } from "./users.js";
-import buildings from "./../Client/buildings.json" assert { type: "json" }; // See if this works or needs parsing
+import buildings from "./../Client/buildings.json" assert { type: "json" };
 import units from "./../Client/units.json" assert {type: "json"}; // See if this works or needs parsing
-import cards from "./../Client/cards.json" assert {type: "json"}; // See if this works or needs parsing
+import cards from "./../Client/cards.json" assert {type: "json"};
 
 class GameState {
     public turn: Team = 0;
@@ -18,8 +18,8 @@ class GameState {
             this.players[p.team].push(p)
         });
         this.fieldSize = fieldSize;
-        this.setField(fieldSize);
-        //this.setup(); // TODO: Give cards to each player
+        this.setField(fieldSize); // Spawn HQs
+        this.setup(); //  Give cards to each player
     }
 
     setField(size: number) {
@@ -39,7 +39,18 @@ class GameState {
         if (size < stats.size * 2 ) {throw new Error("field too small");}
         const obj = this;
         doubleIt((i, j) => obj.spawnBuilding(stats, i * (size - stats.size), j * (size - stats.size), [i, j]), 0, 0, 2, 2);
-        
+    }
+    setup() {
+        // Initialize deck and hands
+        this.players.forEach(t => t.forEach(p => {
+            // Eventually, make actual decks
+            // Current deck is 4x Bank, 4x Power Plant, 5x Footsoldier
+            const deck = p.playerInfo!.deck;
+            deck.add(cards["footsoldier"] as Card, 5);
+            deck.add(cards["power plant"] as Card, 4);
+            deck.add(cards["bank"] as Card, 4);
+            deck.shuffle();
+        }))
     }
 
     // Spawns a building with its top left corner at (x, y)
@@ -155,12 +166,21 @@ class GameState {
     }
 }
 
+class Tile {
+    // private terrain; // To be implemented later?
+    // public loc: [number, number]; // Don't need that
+    public occupant: Coordinate | null = null; // Coordinate of occupant or null if unoccupied
+    constructor() {
+        // If needed?
+    }
+}
+
 class PlayerInfo {
     public self: Coordinate;
     private cards: Card[] = [];
-    private deck: Deck = new Deck();
+    public deck: Deck = new Deck();
     public buildings: Coordinate[] = []; // Top left corners of their buildings
-    private units: Coordinate[] = []; // Coordinates of their units
+    public units: Coordinate[] = []; // Coordinates of their units
     public money = 0;
     public energy = 0; // Current energy available
     public totalEnergy = 0; // Total energy
@@ -194,47 +214,7 @@ class PlayerInfo {
 type Card = {
     name: string, // internal identifier
     faction: Faction | "N", // Faction this belongs to, or "N" for Neutral
-    cardType: CardType.Unit | CardType.Building, // Building | Unit | Operation
-    cost: number, // cost in money
-    targets: [{
-        name: string, // beginning with $
-        type: string, // tile/unit/building/player/card etc.
-        properties: {
-            [key: string]: boolean | number | string // Modify in the future as needed
-        }
-    }]
-    spawn: {
-        // type: "unit", // Implied
-        id: string,
-        loc: string,
-        modifiers: {
-            [key: string]: any
-        }[]
-    }
-}/*   | {
-    name: string, // internal identifier
-    faction: Faction | "N", // Faction this belongs to, or "N" for Neutral
-    cardType: CardType.Building, // Building | Unit | Operation
-    cost: number, // cost in money
-    targets: [{
-        name: string, // beginning with $
-        type: string, // tile/unit/building/player/card etc.
-        properties: {
-            [key: string]: boolean | number | string // Modify in the future as needed
-        }
-    }]
-    spawn: {
-        // type: "building", // Implied
-        id: string,
-        loc: string,
-        modifiers: {
-            [key: string]: any
-        }[]
-    }
-}*/   | {
-    name: string, // internal identifier
-    faction: Faction | "N", // Faction this belongs to, or "N" for Neutral
-    cardType: CardType.Operation, // Building | Unit | Operation
+    cardType: CardType // Building | Unit | Operation
     cost: number, // cost in money
     targets: {
         name: string, // beginning with $
@@ -244,10 +224,21 @@ type Card = {
         }
     }[]
     effects: {
-        effect: string,
+        effect: string // name of the type of effect
         [key: string]: any
     }[]
-};
+    /* Sample effect entry:
+    {
+        effect: spawn
+        id: string,
+        loc: string,
+        modifiers: {
+            [key: string]: any
+        }[]
+    }
+    */
+    
+}
 
 class Deck {
     private cards: Card[] = [];
@@ -262,9 +253,12 @@ class Deck {
             [this.cards[i], this.cards[temp]] = [this.cards[temp], this.cards[i]];
         }
     }
-    add(card: Card, quantity: number) {
-        // Update parameters later as card constructor changes
-        for (let i = 0; i < quantity; i++) {this.cards.push(card);}
+    add(card: Card, quantity=1) {
+        //if (quantity === 1) {
+        //    this.cards.push(card); // Uses the card directly if quantity is 1
+        //} else {
+            for (let i = 0; i < quantity; i++) this.cards.push(deepCopy(card));
+        //}
         this.size += quantity;
     }
     draw() {
@@ -279,15 +273,6 @@ class Deck {
         }
         this.size--;
         return this.cards.splice(i, 1)[0];
-    }
-}
-
-class Tile {
-    // private terrain; // To be implemented later?
-    // public loc: [number, number]; // Don't need that
-    public occupant: Coordinate | null = null; // Coordinate of occupant or null if unoccupied
-    constructor() {
-        // If needed?
     }
 }
 
@@ -420,6 +405,27 @@ function doubleIt(f: (i: number, j: number)=>void, x:number, y:number, xEnd:numb
 
 function compArr<T>(c1: T[], c2: T[]) {
     return c1.length === c2.length && c1.every((e, i)=>e === c2[i]);
+}
+
+/*function deepCopy<T>(obj: {[key: string]: T}) {
+    const copy: {[key: string]: T} = {};
+    for (let p in obj) {
+        copy[p] = obj[p];
+    }
+    return copy;
+}*/
+function deepCopy<T>(obj: T): T {
+    if (typeof(obj === "object")) {
+        const copy = {...obj};
+        for (let key in copy) {
+            if (typeof copy[key] === "object") {
+                copy[key] = deepCopy(copy[key]);
+            }
+        }
+        return copy;
+    } else {
+        return obj; // Does not work with functions and symbols
+    }
 }
 
 export { GameState, PlayerInfo, Card, BuildingStats, UnitStats }; // Tile, Field, Unit, Building

@@ -1,7 +1,7 @@
 {
     "template-of-operation": {
         "name":"template | order card entries by faction, then name",
-        "faction": "N for neutral",
+        "faction": "N",
         "cardType": "U or B or O",
         "cost": 0,
         "targets": [
@@ -17,13 +17,12 @@
             }
             }
         ],
-        "effect": {
-            "spawn": {
-                "type": "unit",
-                "id": "footsoldier",
-                "loc": "$var"
-            }
-        },
+        "effects": [{
+            "effect": "spawn",
+            "type": "unit",
+            "id": "footsoldier",
+            "loc": "$var"
+        }],
         "potentially_other_stuff_here": "some_value_here"
     },
 
@@ -33,11 +32,26 @@
         "cardType": "B",
         "cost": 2,
         "targets": [{"name": "$loc", "type": "tile", "properties": {"buildable": true}}],
-        "spawn": {
+        "effects": [{
+            "effect": "spawn",
+            "type": "building",
             "id": "power plant",
-            "loc": "$loc",
-            "modifiers": []
-        }
+            "loc": "$var"
+        }]
+    },
+
+    "bank": {
+        "name": "Bank",
+        "faction": "N",
+        "cardType": "B",
+        "cost": 2,
+        "targets": [{"name": "$loc", "type": "tile", "properties": {"buildable": true}}],
+        "effects": [{
+            "effect": "spawn",
+            "type": "building",
+            "id": "bank",
+            "loc": "$var"
+        }]
     },
 
     "footsoldier": {
@@ -46,11 +60,12 @@
         "cardType": "U",
         "cost": 1,
         "targets": [{"name": "$loc", "type": "tile", "properties": {"next-to-hq": true}}],
-        "spawn": {
+        "effects": [{
+            "effect": "spawn",
+            "type": "unit",
             "id": "footsoldier",
-            "loc": "$loc",
-            "modifiers": []
-        }
+            "loc": "$var"
+        }]
     }
 
 }
