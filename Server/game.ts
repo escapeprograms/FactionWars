@@ -50,6 +50,8 @@ class GameState {
             deck.add(cards["power plant"] as Card, 4);
             deck.add(cards["bank"] as Card, 4);
             deck.shuffle();
+            // Currently, players start with 5 cards in hand
+            for (let i = 0; i < 5; i++) p.playerInfo!.draw();
         }))
     }
 
@@ -177,7 +179,7 @@ class Tile {
 
 class PlayerInfo {
     public self: Coordinate;
-    private cards: Card[] = [];
+    public cards: Card[] = [];
     public deck: Deck = new Deck();
     public buildings: Coordinate[] = []; // Top left corners of their buildings
     public units: Coordinate[] = []; // Coordinates of their units
@@ -189,6 +191,11 @@ class PlayerInfo {
     }
     // Deactivates buildings until energy is nonnegative
     // Pass in game.buildings
+    draw() {
+        const card = this.deck.draw();
+        if (card) this.cards.push(card);
+        else {console.log("No card drawn"); throw new Error("Failed to draw a card");} //TODO Fix this mechanic later
+    }
     upkeep(buildings: Building[]) {
         let i = buildings.length;
         while (this.energy < 0) {
