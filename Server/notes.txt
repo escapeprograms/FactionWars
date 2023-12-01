@@ -65,6 +65,11 @@ Units
  - Sight (for purposes of fog of war, which is not currently implemented)
     - Uses euclidean distance & line of sight
 
+Cards
+ - Players start the game with 5 Cards
+ - Players draw 1 card per turn
+ - *Above card rules are liable to change
+
  Note: It is difficult to send functions over sockets. Do not have a loop with objects that reference each other.
  In order to facilitate that, we are removing circular and duplicate references within Players and GameStates.
  When storing or sending a game, we ignore the Game class and instead just serialize the GameState class.

@@ -1,8 +1,12 @@
-import { CardType, Player, Team, Coordinate, Game, ClientGameState, Faction } from "./types.js";
+import { CardType, Player, Team, Coordinate, ClientGameState, Faction } from "./types.js";
 import { socketTable } from "./users.js";
-import buildings from "./../Client/buildings.json" assert { type: "json" };
-import units from "./../Client/units.json" assert {type: "json"}; // See if this works or needs parsing
-import cards from "./../Client/cards.json" assert {type: "json"};
+import b from "./../Client/buildings.json" //assert { type: "json" };
+import u from "./../Client/units.json" //assert {type: "json"}; // See if this works or needs parsing
+import c from "./../Client/cards.json" //assert {type: "json"};
+
+const buildings = b as {[key: string]: BuildingStats}; // To establish type
+const units = u as {[key: string]: UnitStats};
+const cards = c as {[key: string]: Card};
 
 class GameState {
     public turn: Team = 0;
@@ -70,11 +74,21 @@ class GameState {
             return null;
         }
     }
+    spawnUnit(unit: UnitStats, x:number, y:number, owner: Coordinate): Unit | null {
+        if (!this.field[x][y].occupant) {
+            this.getPlayer(owner).playerInfo!.units.push([x, y]);
+            const u = new Unit([x, y], unit, owner);
+            this.units.push(u);
+            return u;
+        } else {
+            return null;
+        }
+    }
 
     // Verifies if a building can be placed at the specified location
     verifyPlacement(size: number, x: number, y: number):boolean {
-        if (x < 0 || y < 0 || x + size > this.fieldSize || y + size > this.fieldSize) { return false;}
-        if (x % 1 !== 0 || y % 1 !== 0) {return false;}
+        // Assumes square field
+        if (!isInt(x, 0, this.fieldSize - size) || !isInt(y, 0, this.fieldSize - size)) return false;
         
         let valid = true;
         const obj = this;
@@ -87,7 +101,7 @@ class GameState {
     endTurn() {
         // Activate end of turn effects, as applicable
         this.buildings.forEach(b=>b.endTurn(this));
-        this.units.forEach(u=>u.startTurn()); // Currently does nothing
+        this.units.forEach(u=>u.endTurn()); // Currently does nothing
         this.turn = 1 - this.turn;
         // call startTurn() here?
     }
@@ -96,6 +110,8 @@ class GameState {
         // Activate start of turn effects, as applicable
         this.buildings.forEach(b=>b.startTurn(this.getPlayer(b.owner).playerInfo!));
         this.units.forEach(u=>u.startTurn());
+        // Players draw a card at the start of their turn
+        this.players[this.turn].forEach(p => p.playerInfo!.draw());
         // Start timer?
     }
 
@@ -106,7 +122,12 @@ class GameState {
     getTile(c: Coordinate) {
         return this.field[c[0]][c[1]];
     }
-
+    getBuilding(c: Coordinate) {
+        return this.buildings.find(b => compArr(b.loc, c));
+    }
+    getUnit(c: Coordinate) {
+        return this.units.find(u => compArr(u.tile, c));
+    }
     // Returns a ClientGameState for the specified client, if any
     clientCopy(player?: Coordinate): ClientGameState {
         return {
@@ -193,8 +214,16 @@ class PlayerInfo {
     // Pass in game.buildings
     draw() {
         const card = this.deck.draw();
-        if (card) this.cards.push(card);
-        else {console.log("No card drawn"); throw new Error("Failed to draw a card");} //TODO Fix this mechanic later
+        if (!card) {console.log("No card drawn"); throw new Error("Failed to draw a card");} //TODO Fix this mechanic later
+        if (this.cards.length >= 10) { // Currently, hand size is 10
+            this.deck.add(card); // Immediately discard; hand is full
+            console.log("Hand is full, drawn card immediately discarded");
+        } else this.cards.push(card); // Add card to hand
+    }
+    discard(index: number): boolean {
+        if (!isInt(index, 0, this.cards.length - 1)) return false;
+        this.deck.add(this.cards.splice(index, 1)[0]);
+        return true;
     }
     upkeep(buildings: Building[]) {
         let i = buildings.length;
@@ -203,6 +232,80 @@ class PlayerInfo {
                 buildings[i].deactivate(this);
             }
         }
+    }
+    // Plays the card at the specified index
+    // Returns true on success
+    play(game: GameState, index: number, targets: {[key: string]: any}) {
+        const self = game.getPlayer(this.self);
+        let card: Card;
+        // can only play on your turn and can only play cards that exist
+        if (game.turn !== self.team || !isInt(index, 0, this.cards.length - 1)) return false;
+        card = this.cards[index];
+        // Check validity of targets
+        if (this.validTargets(game, card, targets)) {
+            card.effects.forEach(e => {
+                switch(e.effect) {
+                    case "spawn":
+                        // Assumes e.loc is valid type, either variable or Coordinate (maybe improve later)
+                        const [x, y] = (typeof(e.loc) === "string" && e.loc[0] === "$") ? targets[e.loc] : e.loc;
+                        if (e.type === "unit") {
+                            game.spawnUnit(units[e.id], x, y, this.self);
+                            this.discard(index);
+                        } else if (e.type === "building") {
+                            game.spawnBuilding(buildings[e.id], x, y, this.self);
+                            this.discard(index); // Discard card after playing
+                        } else {
+                            console.log("Spawn type invalid.");
+                            throw new Error("Spawn type invalid");
+                        }
+                    case "gain":
+                        const player = e.target === self ? this : game.getPlayer(targets[e.target]).playerInfo!; // Assumes has to be self or variable
+                        if (e.type === "money") {
+                            player.money += e.quantity;
+                        } else {
+                            console.log("Gain type invalid.");
+                            throw new Error("Gain type invalid");
+                        } 
+                    default:
+                        console.log("Unknown effect: " + e.effect);
+                        throw new Error(`Effect type ${e.effect} not supported`);
+                }
+            });
+        } else {
+            // Targets invalid, cannot play
+            return false;
+        }
+
+    }
+    // Checks validity of card targets
+    validTargets(game: GameState, card: Card, targets: {[key: string]: any}): boolean {
+        if (Object.keys(targets).length !== card.targets.length) return false;
+        const isCoord = (c: any, min?: number, max?: number) => Array.isArray(c) && c.length === 2 && c.every(x => isInt(x, min, max));
+        card.targets.forEach((t, i) => {
+            const tar = targets[t.name];
+            if (!tar) return false;
+            // TODO: Check the properties as well
+            switch (t.type) {
+                case "tile":
+                    if (!isCoord(tar, 0, game.fieldSize - 1)) return false;
+                    return true;
+                case "unit":
+                    if (!isCoord(tar, 0, game.fieldSize - 1)) return false;
+                    if (!game.getUnit(tar as Coordinate)) return false;
+                    return true;
+                case "building":
+                    if (!isCoord(tar, 0, game.fieldSize - 1)) return false;
+                    if (!game.getBuilding(tar as Coordinate)) return false;
+                case "player": // TODO
+                    if(!isCoord(tar, 0, 1)) return false;
+                    return true;
+                case "choice": // Do this eventually
+                default:
+                    console.log("Unknown type: " + t.type);
+                    throw new Error(`Target type ${t.type} not supported`);
+            }
+        });
+        return true;
     }
     clientCopy(player?: Coordinate) {
         return {
@@ -227,7 +330,7 @@ type Card = {
         name: string, // beginning with $
         type: string, // tile/unit/building/player/card etc.
         properties: {
-            [key: string]: boolean | number | string // Modify in the future as needed
+            [key: string]: any
         }
     }[]
     effects: {
@@ -260,12 +363,12 @@ class Deck {
             [this.cards[i], this.cards[temp]] = [this.cards[temp], this.cards[i]];
         }
     }
-    add(card: Card, quantity=1) {
-        //if (quantity === 1) {
-        //    this.cards.push(card); // Uses the card directly if quantity is 1
-        //} else {
+    add(card: Card, quantity=1, copy=false) {
+        if (quantity === 1 && !copy) {
+            this.cards.push(card); // Uses the card directly if quantity is 1 and copy is false
+        } else {
             for (let i = 0; i < quantity; i++) this.cards.push(deepCopy(card));
-        //}
+        }
         this.size += quantity;
     }
     draw() {
@@ -302,6 +405,7 @@ class Unit {
     public health: number; // Current health
     public steps = 0; // # of steps available
     public moves = 0; // # of times left the player can move the unit
+    public attacks = 0; // # of times left the unit can attack
     // Add team and/or faction property?
     constructor(tile: Coordinate, stats: UnitStats, player: Coordinate) {
         this.tile = tile;
@@ -313,6 +417,7 @@ class Unit {
         // Do start turn stuff here, if any
         this.steps = this.stats.speed;
         this.moves = 1;
+        this.attacks = 1;
     }
     endTurn() {
         // Do end turn stuff here, if any
@@ -433,6 +538,13 @@ function deepCopy<T>(obj: T): T {
     } else {
         return obj; // Does not work with functions and symbols
     }
+}
+
+// Given a number, returns whether or not that number is an integer
+// If given min and max, also checks if the number is within that range (inclusive)
+function isInt(num: number, min?: number, max?: number): boolean {
+    if (num % 1 !== 0) return false;
+    return (min === undefined || max === undefined) || (num >= min && num <= max);
 }
 
 export { GameState, PlayerInfo, Card, BuildingStats, UnitStats }; // Tile, Field, Unit, Building

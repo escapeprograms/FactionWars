@@ -38,7 +38,7 @@
         "damage": 0,
         "range": 0,
         "upkeep": 2,
-        "moneyGen": 2,
+        "moneyGen": 1,
         "energyGen": 0,
         "buildTime": 0,
         "size": 2,

@@ -66,6 +66,20 @@
             "id": "footsoldier",
             "loc": "$var"
         }]
+    },
+
+    "war funds": {
+        "name": "War Funds",
+        "faction": "N",
+        "cardType": "O",
+        "cost": 0,
+        "targets": [],
+        "effects": [{
+            "effect": "gain",
+            "type": "money",
+            "quantity": 3,
+            "target": "self"
+        }]
     }
 
 }
