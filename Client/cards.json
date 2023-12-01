@@ -22,8 +22,7 @@
             "type": "unit",
             "id": "footsoldier",
             "loc": "$var"
-        }],
-        "potentially_other_stuff_here": "some_value_here"
+        }]
     },
 
     "power plant": {
