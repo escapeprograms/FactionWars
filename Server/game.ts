@@ -1,5 +1,6 @@
 import { CardType, Player, Team, Coordinate, ClientGameState, Faction } from "./types.js";
 import { socketTable } from "./users.js";
+import { withinRadius } from "./../Client/functions.js";
 import b from "./../Client/buildings.json" //assert { type: "json" };
 import u from "./../Client/units.json" //assert {type: "json"}; // See if this works or needs parsing
 import c from "./../Client/cards.json" //assert {type: "json"};
@@ -231,7 +232,7 @@ class PlayerInfo {
     }
     draw() {
         const card = this.deck.draw();
-        if (!card) {console.log("No card drawn"); throw new Error("Failed to draw a card");} //TODO Fix this mechanic later
+        if (!card) {console.log("No card drawn"); throw new Error("Failed to draw a card");} //TODO Fix later
         if (this.cards.length >= 10) { // Currently, hand size is 10
             this.deck.add(card); // Immediately discard; hand is full
             console.log("Hand is full, drawn card immediately discarded");
@@ -392,7 +393,7 @@ class Deck {
         this.size += quantity;
     }
     draw() {
-        // TODO: Decide on a draw algorithm
+        // TODO: Later, decide on a draw algorithm
         // Temporarily, we'll use each card has twice the chance of being drawn as the previous card except the last two
         if (this.size === 0) return undefined;
         let i = 0;
@@ -465,9 +466,13 @@ class Unit {
         if (!game.sight(this.loc, target)) return; // Cannot see target
         const victim = game.getOccupant(target) as Unit | Building;
         if (this.stats.splash <= 0 && !victim) return; // Non-splashers cannot attack empty tile
-        // TODO: Implement splash damage
         // Eventually special effects as needed
-        victim.takeDamage(game, this.stats.damage);
+        // NOTE: The code does not check for friendly fire!
+        // Will have to adjust victim finding if field ever becomes non-square
+        (withinRadius(target, this.stats.splash, 0, 0, game.fieldSize-1, game.fieldSize-1) as Coordinate[]).forEach(v => {
+            if (game.getTile(v).occupant) victim.takeDamage(game, this.stats.damage);
+        });
+        
         this.attacks--;
     }
     takeDamage(game: GameState, damage: number) {
@@ -627,5 +632,19 @@ function isInt(num: number, min?: number, max?: number): boolean {
 function dist(a: Coordinate, b: Coordinate): number {
     return Math.sqrt((a[0]-b[0])**2 + (a[1]-b[1])**2);
 }
+
+/*// Returns array of all tiles that are within a given radius of a coordinate
+// Coordinate should have integer values, and radius should be nonnegative
+function withinRadius(c: Coordinate, r: number): Coordinate[] {
+    const result: Coordinate[] = [];
+    const maxY = Math.floor(r);
+    for (let y = maxY; y >= -maxY; y--) {
+        let maxX = Math.floor(Math.sqrt(r**2 - y**2));
+        for (let x = maxX; x >= -maxX; x--) {
+            result.push([c[0] + x, c[1] + y])
+        }
+    }
+    return result;
+}*/
 
 export { GameState, PlayerInfo, Card, BuildingStats, Building, UnitStats, Unit }; // Tile, Field
