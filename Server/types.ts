@@ -1,4 +1,4 @@
-import { PlayerInfo, GameState, Card, BuildingStats, UnitStats } from "./game.js";
+import { PlayerInfo, GameState, Card, Unit, Building } from "./game.js";
 
 export type Faction = "T" | "M" | "S" | "A";
 
@@ -81,20 +81,6 @@ export type ClientGameState = {
             totalEnergy: number // Total energy
         }
     }[][],
-    buildings: {
-        loc: Coordinate, // Coordinates of upper left tile
-        stats: BuildingStats,
-        owner: Coordinate, // [team, number] of player
-        health: number, // Current health
-        buildLeft: number, // Turns left for buildTime
-        active: boolean // Whether the building is active or inactive (disactivated)
-    }[],
-    units: {
-        tile: Coordinate,
-        stats: UnitStats,
-        owner: Coordinate, // [team, number] of player
-        health: number, // Current health
-        steps: number,
-        moves: number
-    }[]
+    buildings: Building[]
+    units: Unit[]
 }

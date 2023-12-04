@@ -60,6 +60,7 @@ io.on("connection", (socket: Socket) => {
                     socket.to(game.id).emit("player-left-lobby", sock.clientId);
                 }
             } else if (sock.state === SocketState.Game) {
+                // TODO
                 // const {player, game} = sock.info as {game: Game, player: Player};
                 // Do other stuff here as appropriate
                 // emit "player-left-game", sock.clientId

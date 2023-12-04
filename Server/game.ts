@@ -64,7 +64,7 @@ class GameState {
     spawnBuilding(building: BuildingStats, x:number, y:number, owner: Coordinate): Building | null {
         // Verify placement
         if (this.verifyPlacement(building.size, x, y)) {
-            doubleIt((i, j)=>this.field[i][j].occupant = [x, y], x, y, x+building.size, y+building.size);
+            doubleIt((i, j)=>this.field[i][j].occupy([x, y], "building"), x, y, x+building.size, y+building.size);
             this.getPlayer(owner).playerInfo!.buildings.push([x, y]); // Assumes playerinfo is not null
             const b = new Building(this, [x, y], building, owner);
             this.buildings.push(b);
@@ -76,6 +76,7 @@ class GameState {
     }
     spawnUnit(unit: UnitStats, x:number, y:number, owner: Coordinate): Unit | null {
         if (!this.field[x][y].occupant) {
+            this.field[x][y].occupy([x, y], "unit");
             this.getPlayer(owner).playerInfo!.units.push([x, y]);
             const u = new Unit([x, y], unit, owner);
             this.units.push(u);
@@ -126,7 +127,16 @@ class GameState {
         return this.buildings.find(b => compArr(b.loc, c));
     }
     getUnit(c: Coordinate) {
-        return this.units.find(u => compArr(u.tile, c));
+        return this.units.find(u => compArr(u.loc, c));
+    }
+    // Versatile but painful to use due to typing
+    get(c: Coordinate, type: "unit" | "building" | "tile" | "player" | null) {
+        if (type === "unit" || type === "building") return this[type + "s" as "units" | "buildings"].find(x => compArr(x.loc, c));
+        else if (type === "tile" || type === "player") return this[type === "tile" ? "field" : "players"][c[0]][c[1]];
+        else return null;
+    }
+    getOccupant(c: Coordinate) {
+        return this.get(c, this.getTile(c).occupantType);
     }
     // Returns a ClientGameState for the specified client, if any
     clientCopy(player?: Coordinate): ClientGameState {
@@ -193,8 +203,17 @@ class Tile {
     // private terrain; // To be implemented later?
     // public loc: [number, number]; // Don't need that
     public occupant: Coordinate | null = null; // Coordinate of occupant or null if unoccupied
+    public occupantType: "unit" | "building" | null = null;
     constructor() {
         // If needed?
+    }
+    occupy(occupant: Coordinate, occupantType: "unit" | "building") {
+        this.occupant = occupant;
+        this.occupantType = occupantType;
+    }
+    leave() {
+        this.occupant = null;
+        this.occupantType = null;
     }
 }
 
@@ -210,8 +229,6 @@ class PlayerInfo {
     constructor(self: Coordinate) {
         this.self = self;
     }
-    // Deactivates buildings until energy is nonnegative
-    // Pass in game.buildings
     draw() {
         const card = this.deck.draw();
         if (!card) {console.log("No card drawn"); throw new Error("Failed to draw a card");} //TODO Fix this mechanic later
@@ -225,18 +242,21 @@ class PlayerInfo {
         this.deck.add(this.cards.splice(index, 1)[0]);
         return true;
     }
-    upkeep(buildings: Building[]) {
+    // Deactivates buildings until energy is nonnegative
+    // Pass in game
+    upkeep(game: GameState) {
+        const buildings = game.buildings;
         let i = buildings.length;
         while (this.energy < 0) {
             if (compArr(this.self, buildings[--i].owner) && buildings[i].stats.upkeep > 0) {
-                buildings[i].deactivate(this);
+                buildings[i].deactivate(game);
             }
         }
     }
     // Plays the card at the specified index
     // Returns true on success
     play(game: GameState, index: number, targets: {[key: string]: any}) {
-        const self = game.getPlayer(this.self);
+        const self = game.get(this.self, "player") as Player; //game.getPlayer(this.self);
         let card: Card;
         // can only play on your turn and can only play cards that exist
         if (game.turn !== self.team || !isInt(index, 0, this.cards.length - 1)) return false;
@@ -296,7 +316,7 @@ class PlayerInfo {
                 case "building":
                     if (!isCoord(tar, 0, game.fieldSize - 1)) return false;
                     if (!game.getBuilding(tar as Coordinate)) return false;
-                case "player": // TODO
+                case "player":
                     if(!isCoord(tar, 0, 1)) return false;
                     return true;
                 case "choice": // Do this eventually
@@ -393,13 +413,14 @@ type UnitStats  = {
     damage: number; // Attack damage
     speed: number;
     range: number; // 1 = melee
+    splash: number; // Splash radius in tiles, 0 for melee
     attributes: string[]; // Could potentially make a new type or enum for this
     // Possibly add methods for getting and changing stats
     // Possibly add methods for taking damage, dying, and other actions
 }
 
 class Unit {
-    public tile: Coordinate;
+    public loc: Coordinate;
     public stats: UnitStats;
     public owner: Coordinate; // [team, number] of player
     public health: number; // Current health
@@ -407,8 +428,8 @@ class Unit {
     public moves = 0; // # of times left the player can move the unit
     public attacks = 0; // # of times left the unit can attack
     // Add team and/or faction property?
-    constructor(tile: Coordinate, stats: UnitStats, player: Coordinate) {
-        this.tile = tile;
+    constructor(loc: Coordinate, stats: UnitStats, player: Coordinate) {
+        this.loc = loc;
         this.stats = stats;
         this.owner = player;
         this.health = stats.maxHealth;
@@ -431,15 +452,46 @@ class Unit {
             if (this.isAdj(step) && !game.getTile(step).occupant) {
                 steps.shift();
                 this.steps--;
-                this.tile = step;
+                this.loc = step;
                 // Add in invisible unit detection things here
             } else {
                 return; // invalid step
             }
         }
     }
+    attack(game: GameState, target: Coordinate) {
+        if (this.attacks < 1) return; // Out of attacks
+        if (dist(this.loc, target) > this.stats.range) return; // Out of range
+        if (!game.sight(this.loc, target)) return; // Cannot see target
+        const victim = game.getOccupant(target) as Unit | Building;
+        if (this.stats.splash <= 0 && !victim) return; // Non-splashers cannot attack empty tile
+        // TODO: Implement splash damage
+        // Eventually special effects as needed
+        victim.takeDamage(game, this.stats.damage);
+        this.attacks--;
+    }
+    takeDamage(game: GameState, damage: number) {
+        // Eventually implement special abilities as necessary
+        this.health -= damage;
+        if (this.health <= 0) this.die(game);
+    }
+    die(game: GameState) {
+        // Eventually, implement on death effects (if any)
+        // Remove from unit list
+        let i = game.units.findIndex(u => u.loc === this.loc);
+        if (i === -1) {throw new Error("Unit tried to die but was not found in game's unit array");}
+        game.units.splice(i, 1);
+        // Remove from player's owned units
+        let u = game.getPlayer(this.owner).playerInfo!.units;
+        i = u.findIndex(c => c === this.loc);
+        if (i === -1) {throw new Error("Unit tried to die but was not found in player's unit array");}
+        u.splice(i, 1);
+        // Remove from tile
+        game.getTile(this.loc).leave();
+        // There should be no more references to this unit so it can be garbage collected?
+    }
     isAdj(loc: Coordinate): boolean {
-        return loc[0] % 1 === 0 && loc[1] % 1 === 0 && (Math.abs(loc[0] - this.tile[0]) + Math.abs(loc[1] - this.tile[1]) === 1);
+        return loc[0] % 1 === 0 && loc[1] % 1 === 0 && (Math.abs(loc[0] - this.loc[0]) + Math.abs(loc[1] - this.loc[1]) === 1);
     }
 }
 
@@ -498,12 +550,36 @@ class Building {
         return this.active;
     }
     // Pass in owner's PlayerInfo
-    deactivate(owner: PlayerInfo) {
+    deactivate(game: GameState) {
         if (this.active) {
+            const owner = game.getPlayer(this.owner).playerInfo!;
             owner.energy -= this.stats.energyGen - this.stats.upkeep;
             owner.totalEnergy -= this.stats.energyGen;
             this.active = false;
         }
+    }
+    takeDamage(game: GameState, damage: number) {
+        // Eventually implement special abilities as necessary
+        this.health -= damage;
+        if (this.health <= 0) this.die(game);
+    }
+    die(game: GameState) {
+        // Eventually, implement on death effects (if any)
+        // Remove from building list
+        let i = game.buildings.findIndex(u => u.loc === this.loc);
+        if (i === -1) {throw new Error("Building tried to die but was not found in game's building array");}
+        game.buildings.splice(i, 1);
+        // Remove from player's owned units
+        let b = game.getPlayer(this.owner).playerInfo!.buildings;
+        i = b.findIndex(c => c === this.loc);
+        if (i === -1) {throw new Error("Building tried to die but was not found in player's building array");}
+        b.splice(i, 1);
+        // Remove from tile
+        game.getTile(this.loc).leave();
+        // Deactivate as this is no longer producing energy
+        this.deactivate(game);
+        game.getPlayer(this.owner).playerInfo!.upkeep(game);
+        // There should be no more references to this unit so it can be garbage collected?
     }
 }
 
@@ -547,4 +623,9 @@ function isInt(num: number, min?: number, max?: number): boolean {
     return (min === undefined || max === undefined) || (num >= min && num <= max);
 }
 
-export { GameState, PlayerInfo, Card, BuildingStats, UnitStats }; // Tile, Field, Unit, Building
+// Returns euclidean distance between two coordinates
+function dist(a: Coordinate, b: Coordinate): number {
+    return Math.sqrt((a[0]-b[0])**2 + (a[1]-b[1])**2);
+}
+
+export { GameState, PlayerInfo, Card, BuildingStats, Building, UnitStats, Unit }; // Tile, Field
