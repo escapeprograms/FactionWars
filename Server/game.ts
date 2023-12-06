@@ -455,6 +455,11 @@ class Unit {
                 this.steps--;
                 this.loc = step;
                 // Add in invisible unit detection things here
+                // Adjust name in references to this unit (owner.unit, for instance)
+                const u = game.getPlayer(this.owner).playerInfo!.units
+                const i = u.findIndex(c => compArr(c, this.loc));
+                if (i < 0) throw new Error("Unit not found in owner's unit array");
+                u[i] = [...this.loc]; // To avoid weird things happening
             } else {
                 return; // invalid step
             }
@@ -464,13 +469,13 @@ class Unit {
         if (this.attacks < 1) return; // Out of attacks
         if (dist(this.loc, target) > this.stats.range) return; // Out of range
         if (!game.sight(this.loc, target)) return; // Cannot see target
-        const victim = game.getOccupant(target) as Unit | Building;
-        if (this.stats.splash <= 0 && !victim) return; // Non-splashers cannot attack empty tile
+        if (this.stats.splash <= 0 && !game.getTile(target).occupant) return; // Non-splashers cannot attack empty tile
         // Eventually special effects as needed
         // NOTE: The code does not check for friendly fire!
         // Will have to adjust victim finding if field ever becomes non-square
+        let victim;
         (withinRadius(target, this.stats.splash, 0, 0, game.fieldSize-1, game.fieldSize-1) as Coordinate[]).forEach(v => {
-            if (game.getTile(v).occupant) victim.takeDamage(game, this.stats.damage);
+            if (victim = game.getOccupant(v) as Unit | Building | null) victim.takeDamage(game, this.stats.damage);
         });
         
         this.attacks--;
@@ -503,6 +508,7 @@ class Unit {
 type BuildingStats  = {
     maxHealth: number;
     damage: number; // Attack damage, 0 for doesn't attack?
+    splash: number; // splash radius, 0 for no splash/doesn't attack
     range: number; // 0 for doesn't attack normally?
     upkeep: number; // amount of energy required for upkeep
     moneyGen: number; // Money generated at the start of each turn
@@ -519,6 +525,7 @@ class Building {
     public health: number; // Current health
     public buildLeft: number; // Turns left for buildTime
     public active: boolean = false; // Whether the building is active or inactive (disactivated)
+    public attacks = 0; // Number of times the building can attack this turn
     constructor(game: GameState, loc: Coordinate, stats: BuildingStats, player: Coordinate) {
         this.loc = loc;
         this.stats = stats;
@@ -541,6 +548,7 @@ class Building {
         // Generate, if active
         if(this.active) {
             owner.money += this.stats.moneyGen;
+            this.attacks = this.stats.damage > 0 ? 1 : 0;
             // Maybe other effects here
         }
     }
@@ -562,6 +570,21 @@ class Building {
             owner.totalEnergy -= this.stats.energyGen;
             this.active = false;
         }
+    }
+    attack(game: GameState, target: Coordinate) {
+        if (this.attacks < 1 || this.stats.damage === 0) return; // Out of attacks / Cannot attack
+        if (dist(this.loc, target) > this.stats.range) return; // Out of range
+        if (!game.sight(this.loc, target)) return; // Cannot see target
+        if (this.stats.splash <= 0 && !game.getTile(target).occupant) return; // Non-splashers cannot attack empty tile
+        // Eventually special effects as needed
+        // NOTE: The code does not check for friendly fire!
+        // Will have to adjust victim finding if field ever becomes non-square
+        let victim;
+        (withinRadius(target, this.stats.splash, 0, 0, game.fieldSize-1, game.fieldSize-1) as Coordinate[]).forEach(v => {
+            if (victim = game.getOccupant(v) as Unit | Building | null) victim.takeDamage(game, this.stats.damage);
+        });
+        
+        this.attacks--;
     }
     takeDamage(game: GameState, damage: number) {
         // Eventually implement special abilities as necessary
