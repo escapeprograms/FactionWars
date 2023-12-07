@@ -1,9 +1,9 @@
 import { CardType, Player, Team, Coordinate, ClientGameState, Faction } from "./types.js";
 import { socketTable } from "./users.js";
 import { withinRadius } from "./../Client/functions.js";
-import b from "./../Client/buildings.json" //assert { type: "json" };
-import u from "./../Client/units.json" //assert {type: "json"}; // See if this works or needs parsing
-import c from "./../Client/cards.json" //assert {type: "json"};
+import b from "./../Client/buildings.json" assert { type: "json" };
+import u from "./../Client/units.json" assert {type: "json"}; // See if this works or needs parsing
+import c from "./../Client/cards.json" assert {type: "json"};
 
 const buildings = b as {[key: string]: BuildingStats}; // To establish type
 const units = u as {[key: string]: UnitStats};
@@ -205,6 +205,8 @@ class Tile {
     // public loc: [number, number]; // Don't need that
     public occupant: Coordinate | null = null; // Coordinate of occupant or null if unoccupied
     public occupantType: "unit" | "building" | null = null;
+    // For fog of war:
+    // public views: [[number, number], [number, number]]; // Each number represents the number of units viewing the tile for that player
     constructor() {
         // If needed?
     }
