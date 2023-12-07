@@ -602,8 +602,8 @@ class Building {
         i = b.findIndex(c => c === this.loc);
         if (i === -1) {throw new Error("Building tried to die but was not found in player's building array");}
         b.splice(i, 1);
-        // Remove from tile
-        game.getTile(this.loc).leave();
+        // Remove from tiles
+        doubleIt((i, j) => game.field[i][j].leave(), this.loc[0], this.loc[1], this.loc[0] + this.stats.size, this.loc[1] + this.stats.size);
         // Deactivate as this is no longer producing energy
         this.deactivate(game);
         game.getPlayer(this.owner).playerInfo!.upkeep(game);
