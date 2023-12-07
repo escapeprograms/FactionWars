@@ -14,9 +14,13 @@ export enum SocketState {
 }
 
 export type SocketInfo = {
-    state: SocketState,
+    state: SocketState.Menu,
+    clientId: string
+    info: undefined
+} | {
+    state: SocketState.Lobby | SocketState.Game,
     clientId: string,
-    info: undefined | { player: Player, game: Game }
+    info: { player: Player, game: Game }
 }
 
 export type Player = {
