@@ -6,7 +6,7 @@ import { Server, Socket } from "socket.io";
 import { socketTable, generateClientId } from "./users.js"
 import { isValidName } from "../Client/functions.js";
 import { createLobby, joinLobby, filterLobby, lobbyTable, verifyLobby } from "./lobby.js";
-import { SocketState, Faction, Game, Player } from "./types.js";
+import { SocketState, Faction, Game, Player, SocketInfo } from "./types.js";
 import { PlayerInfo, GameState } from "./game.js"
 
 const clientPath = path.resolve("Client")
@@ -17,8 +17,19 @@ app.use(express.static(clientPath))
 
 const server = http.createServer(app);
 const io = new Server(server);
+const sockets = io.sockets.sockets; // Maps socketids to sockets
 
 io.on("connection", (socket: Socket) => {
+    function checkState(sock: SocketInfo, state: SocketState): boolean {
+        if (!sock) return false;
+        if (sock.state !== state) {
+            socket.emit("state-error"); // If needed, can specify the needed state
+            return false;
+        }
+        return true;
+    }
+
+
     console.log("New connection: " + socket.id);//
     // Add socket to socketTable
     if (!socket.recovered && (socketTable[socket.id] !== undefined)) {
@@ -70,6 +81,8 @@ io.on("connection", (socket: Socket) => {
     });
     socket.on("create-game", (name) => {
         console.log(socket.id + " is trying to create a game");//
+        const sock = socketTable[socket.id];
+        if (!checkState(sock, SocketState.Menu)) return;
         if (isValidName(name)) {
             const player: Player = {
                 id: socket.id,
@@ -79,8 +92,8 @@ io.on("connection", (socket: Socket) => {
                 playerInfo: undefined
             };
             const lobby = createLobby(player);
-            socketTable[socket.id].state = SocketState.Lobby;
-            socketTable[socket.id].info = {player: player, game: lobby};
+            sock.state = SocketState.Lobby;
+            sock.info = {player: player, game: lobby};
             socket.join(lobby.id);
             socket.emit("created-lobby", filterLobby(lobby));
             // Not emitting new-join because there shouldn't be anyone else in the lobby
@@ -92,6 +105,8 @@ io.on("connection", (socket: Socket) => {
     });
     socket.on("join-game", (name, lobbyId) => {
         console.log(socket.id + " is trying to join a lobby.");//
+        const sock = socketTable[socket.id];
+        if (!checkState(sock, SocketState.Menu)) return;
         if (isValidName(name)) {
             const player: Player = {
                 id: socket.id,
@@ -119,9 +134,7 @@ io.on("connection", (socket: Socket) => {
     socket.on("change-team", () => {
         console.log(socket.id + " is trying to change their team.");//
         const sock = socketTable[socket.id];
-        if (!sock || sock.state !== SocketState.Lobby) {
-            socket.emit("team-change-error", "invalid-state")
-        } else {
+        if(checkState(sock, SocketState.Lobby)) {
             const {player, game} = sock.info!;
             player.team = 1 - player.team;
             socket.emit("team-change-success", player.team);
@@ -131,9 +144,9 @@ io.on("connection", (socket: Socket) => {
     socket.on("change-faction", (faction) => {
         console.log(socket.id + " is trying to change their faction.");//
         const sock = socketTable[socket.id];
-        if (!sock || sock.state !== SocketState.Lobby) {
-            socket.emit("faction-change-error", "invalid-state")
-        } else if (!(faction === "T" || faction === "M" || faction === "S" || faction === "A")) {
+        if (!checkState(sock, SocketState.Lobby)) {
+            return;
+        } if (!(faction === "T" || faction === "M" || faction === "S" || faction === "A")) {
             socket.emit("faction-change-error", "invalid-faction")
         } else {
             const {player, game} = sock.info!;
@@ -157,9 +170,7 @@ io.on("connection", (socket: Socket) => {
     socket.on("start-game", ()=> {
         console.log(socket.id + " is trying to start their game.");//
         const sock = socketTable[socket.id];
-        if (!sock || sock.state !== SocketState.Lobby) {
-            socket.emit("game-start-error", "invalid-state");
-        } else {
+        if(checkState(sock, SocketState.Lobby)) {
             const {player, game} = sock.info!;
             // Verify sender is host (might change or remove this part in the future?)
             if (game.players[0] !== player) {
@@ -172,15 +183,22 @@ io.on("connection", (socket: Socket) => {
                 }); 
                 game.gameInfo = new GameState(game.players); // Possibly add arguments later
                 game.started = true;
-                const socks = io.sockets.sockets;
                 // Send specialized GameState to each player
-                game.players.forEach(p=>socks.get(p.id)?.emit("game-start", game.gameInfo!.clientCopy(p.playerInfo!.self))) // TODO: Test
+                game.players.forEach(p=>sockets.get(p.id)?.emit("game-start", game.gameInfo!.clientCopy(p.playerInfo!.self)));
                 console.log(socket.id + " has started game: " + game.id);//
             } else {
                 socket.emit("game-start-error", "invalid-lobby");
             }
         }
     });
+    socket.on("move-unit", (unit, steps) => {
+        return; // TODO
+        const sock = socketTable[socket.id];
+        if (checkState(sock, SocketState.Game)) {
+            // Validate unit and steps, etc.
+        }
+    });
+    // TODO: Handle move, attack, play card, special actions
 })
 
 server.on("error", (e: string) => {
