@@ -70,6 +70,14 @@ Cards
  - Players draw 1 card per turn
  - *Above card rules are liable to change
 
+Spawning
+ - Buildings are spawned adjacent (not diagonal) to a unit
+ - At the end of your turn, each adjacent unit contributes 1 to building construction
+ - Building health starts at 1/(x+1) when placed and gains 1/(x+1) per build tick, where x is total build ticks needed
+ - Units can be spawned within distance of 2 of a building (or just HQ?)
+ - Units spawn with no attacks and moves left
+ - *Playtesting required to finalize above rules
+
  Note: It is difficult to send functions over sockets. Do not have a loop with objects that reference each other.
  In order to facilitate that, we are removing circular and duplicate references within Players and GameStates.
  When storing or sending a game, we ignore the Game class and instead just serialize the GameState class.
