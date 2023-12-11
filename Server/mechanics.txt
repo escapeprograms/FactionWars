@@ -1,7 +1,42 @@
+General
+ - Turn start
+    - Gain resources from your producers
+    - Draw 1 card
+ - Turn end: Building cooldown ticks down 
+
+Energy Implementation
+ - Each user (Player.PlayerStats)'s energy property tracks the current energy output
+ - When a building generates or stops generating energy, the user's energy property is changed accordingly
+ - If the user's energy output is ever less than energy usage, their buildings will be deactivated in order of last built
+
 Spawning
   - Units: Can be spawned adjacent to/within 2 spaces of buildings 
+    - Spawn with no attacks/moves
   - Buildings: Can be spawned adjacent to units (no diagonals) 
+    - Building health starts at 1/(x+1) when placed and gains 1/(x+1) per build tick, where x is total build ticks needed
 
-Invisibility 
-  - 
+Units
+ - Movement
+    - Each unit may be commanded to move once per turn and attack once per turn (unless otherwise specified)
+    - The client will send the server an array of steps as a move
+    - If a step causes a unit to detect an invisible unit, the unit stops and may be commanded to move again
+    - Speed is the number of steps a unit can take each turn. Detecting an invisible unit does not replenish this.
+    - Units move taxicab-wise (Up/down/left/right)
+ - Range
+    - Unit range uses Euclidean distance, from the center of their tile to the center of the target tile
+    - Melee units have range 1 or 1.5, depending on whether or not they can target diagonally.
+ - Line-of-sight(LOS)
+    - Units and buildings block LOS. In the future, some terrain might also do so.
+    - Draw line from center of source tile to center of target tile. If the line intersects
+      any square that blocks LOS, then LOS is blocked.
+       - If the line passes through a corner, then the corner must be blocked on both sides
+         in order to block LOS.
+ - Sight (for purposes of fog of war, which is not currently implemented)
+    - Uses euclidean distance & LOS
 
+Buildings
+  - Construction
+    - Adjacent units contribute to building construction
+    - At the end of each turn, build time ticks down by 1 for each adjacent unit by default (can be modified w/ keywords)
+      
+      
