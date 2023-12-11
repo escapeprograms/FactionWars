@@ -1,3 +1,7 @@
 Spawning
-  Units: Can be spawned adjacent to buildings
-  Buildings: Can be spawned adjacent to units
+  - Units: Can be spawned adjacent to/within 2 spaces of buildings 
+  - Buildings: Can be spawned adjacent to units (no diagonals) 
+
+Invisibility 
+  - 
+
