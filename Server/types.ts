@@ -20,7 +20,7 @@ export type SocketInfo = {
 } | {
     state: SocketState.Lobby | SocketState.Game,
     clientId: string,
-    info: { player: Player, game: Game }
+    info: { player: Player, lobby: Lobby }
 }
 
 export type Player = {
@@ -31,7 +31,7 @@ export type Player = {
     playerInfo: undefined | PlayerInfo // Undefined while in lobby
 };
 
-export type Game = {
+export type Lobby = {
     players: Player[],
     id: string,
     started: boolean // Same as gameInfo === undefined

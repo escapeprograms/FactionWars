@@ -6,7 +6,7 @@ import { Server, Socket } from "socket.io";
 import { socketTable, generateClientId } from "./users.js"
 import { isValidName } from "../Client/functions.js";
 import { createLobby, joinLobby, filterLobby, lobbyTable, verifyLobby } from "./lobby.js";
-import { SocketState, Faction, Game, Player, SocketInfo } from "./types.js";
+import { SocketState, Faction, Lobby, Player, SocketInfo } from "./types.js";
 import { PlayerInfo, GameState, isCoord, doubleIt } from "./game.js"
 
 const clientPath = path.resolve("Client")
@@ -62,13 +62,13 @@ io.on("connection", (socket: Socket) => {
             // if (sock.state === SocketState.Menu) // Nothing to do here
             if (sock.state === SocketState.Lobby) {
                 // Remove player from lobby
-                const {player, game} = sock.info!;
-                game.players = game.players.filter(x => x.id !== socket.id);
-                if (game.players.length === 0) {
+                const {player, lobby} = sock.info!;
+                lobby.players = lobby.players.filter(x => x.id !== socket.id);
+                if (lobby.players.length === 0) {
                     // Close lobby if lobby is empty
-                    delete lobbyTable[game.id];
+                    delete lobbyTable[lobby.id];
                 } else {
-                    socket.to(game.id).emit("player-left-lobby", sock.clientId);
+                    socket.to(lobby.id).emit("player-left-lobby", sock.clientId);
                 }
             } else if (sock.state === SocketState.Game) {
                 // TODO
@@ -93,7 +93,7 @@ io.on("connection", (socket: Socket) => {
             };
             const lobby = createLobby(player);
             sock.state = SocketState.Lobby;
-            sock.info = {player: player, game: lobby};
+            sock.info = {player: player, lobby: lobby};
             socket.join(lobby.id);
             socket.emit("created-lobby", filterLobby(lobby));
             // Not emitting new-join because there shouldn't be anyone else in the lobby
@@ -118,9 +118,9 @@ io.on("connection", (socket: Socket) => {
             }
             const result = joinLobby(player, lobbyId);
             if (result.isSuccessful) {
-                const lobby = result.value as Game;
+                const lobby = result.value as Lobby;
                 socketTable[socket.id].state = SocketState.Lobby;
-                socketTable[socket.id].info = {player: player, game: lobby};
+                socketTable[socket.id].info = {player: player, lobby: lobby};
                 socket.join(lobby.id);
                 socket.emit("lobby-join-result", true, filterLobby(lobby))
                 socket.to(lobbyId).emit("new-join", {name:name, clientId:socketTable[socket.id].clientId});
@@ -137,10 +137,10 @@ io.on("connection", (socket: Socket) => {
         console.log(socket.id + " is trying to change their team.");//
         const sock = socketTable[socket.id];
         if(checkState(sock, SocketState.Lobby)) {
-            const {player, game} = sock.info!;
+            const {player, lobby} = sock.info!;
             player.team = 1 - player.team;
             socket.emit("team-change-success", player.team);
-            socket.to(game.id).emit("team-change", { clientId: sock.clientId, team: player.team });
+            socket.to(lobby.id).emit("team-change", { clientId: sock.clientId, team: player.team });
         }
     });
     socket.on("change-faction", (faction) => {
@@ -152,7 +152,7 @@ io.on("connection", (socket: Socket) => {
             // This should not happen from a regular client, as the client should have filtered already
             socket.emit("faction-change-error", "invalid-faction")
         } else {
-            const {player, game} = sock.info!;
+            const {player, lobby} = sock.info!;
             /*
             // Check that the faction is not the same as the current faction
             if (faction !== user.faction) {
@@ -166,7 +166,7 @@ io.on("connection", (socket: Socket) => {
             // Allow change to same faction
             player.faction = faction;
             socket.emit("faction-change-success", faction);
-            socket.to(game.id).emit("faction-change", { clientId: sock.clientId, faction: player.faction });
+            socket.to(lobby.id).emit("faction-change", { clientId: sock.clientId, faction: player.faction });
             console.log(socket.id + " has changed their faction to: " + faction);//
         }
     });
@@ -174,21 +174,21 @@ io.on("connection", (socket: Socket) => {
         console.log(socket.id + " is trying to start their game.");//
         const sock = socketTable[socket.id];
         if(checkState(sock, SocketState.Lobby)) {
-            const {player, game} = sock.info!;
+            const {player, lobby} = sock.info!;
             // Verify sender is host (might change or remove this part in the future?)
-            if (game.players[0] !== player) {
+            if (lobby.players[0] !== player) {
                 socket.emit("game-start-error", "not-host"); // Should implement client to check for this first
-            } else if(verifyLobby(game)) {
+            } else if(verifyLobby(lobby)) {
                 // Start the game
-                game.players.forEach(p=>{
+                lobby.players.forEach(p=>{
                     p.playerInfo = new PlayerInfo([-1, -1]) // Coordinates will be changed when GameState is constructed
                     socketTable[p.id].state = SocketState.Game; // socketTable[p.id] should never be undefined
                 }); 
-                game.gameInfo = new GameState(game.players); // Possibly add arguments later
-                game.started = true;
+                lobby.gameInfo = new GameState(lobby.players); // Possibly add arguments later
+                lobby.started = true;
                 // Send specialized GameState to each player
-                game.players.forEach(p=>sockets.get(p.id)?.emit("game-start", game.gameInfo!.clientCopy(p.playerInfo!.self)));
-                console.log(socket.id + " has started game: " + game.id);//
+                lobby.players.forEach(p=>sockets.get(p.id)?.emit("game-start", lobby.gameInfo!.clientCopy(p.playerInfo!.self)));
+                console.log(socket.id + " has started game: " + lobby.id);//
             } else {
                 // Should we have the client filter this first?
                 socket.emit("game-start-error", "invalid-lobby");
@@ -202,7 +202,7 @@ io.on("connection", (socket: Socket) => {
             if (!(isCoord(unit) && Array.isArray(steps) && steps.every(isCoord))) return; // Invalid types
             
             const info = sock.info!;
-            const game = info.game.gameInfo!;
+            const game = info.lobby.gameInfo!;
             const events = game.move(info.player.playerInfo!.self, unit, steps);
             
             // Broadcast events
