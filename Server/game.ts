@@ -1,4 +1,4 @@
-import { CardType, Player, Team, Coordinate, ClientGameState, Faction } from "./types.js";
+import { CardType, Player, Team, Coordinate, ClientGameState, Faction, PlayerArr, SocketEvent } from "./types.js";
 import { socketTable } from "./users.js";
 import { withinRadius } from "./../Client/functions.js";
 import b from "./../Client/buildings.json" assert { type: "json" };
@@ -13,7 +13,7 @@ class GameState {
     public turn: Team = 0;
     public field: Tile[][] = []; // [0][0] is top left corner. [x] moves right, [y] moves down
     public fieldSize: number // For convenience, and assuming square fields
-    public players: [Player[], Player[]] = [[], []]; // [Team0Players, Team1Players]
+    public players: PlayerArr<Player> = [[], []]; // [Team0Players, Team1Players]
     public buildings: Building[] = []; // Contains the only references to in play buildings
     public units: Unit[] = []; // Contains the only references to in play units
 
@@ -197,6 +197,15 @@ class GameState {
             check();
         }
         return valid;
+    }
+
+    move(player: Coordinate, unit: Coordinate, steps: Coordinate[]): PlayerArr<SocketEvent[]> {
+        // TODO: Return double array of event arrays
+        const p = this.getPlayer(player);
+        const u = this.getUnit(unit);
+        if (!p || p.team !== this.turn) return empty(); // Not a player or not their turn
+        if (!u || !compArr(u.owner, player)) return empty(); // Not a valid unit or not their unit
+        return u.move(this, steps);
     }
 }
 
@@ -446,8 +455,9 @@ class Unit {
     endTurn() {
         // Do end turn stuff here, if any
     }
-    move(game: GameState, steps: Coordinate[]) {
-        if (this.moves < 1) return; // Possibly modify this later?
+    move(game: GameState, steps: Coordinate[]): PlayerArr<SocketEvent[]> {
+        const ret: PlayerArr<SocketEvent[]> = empty();
+        if (this.moves < 1) return ret;
         this.moves--; // Possibly modify this later?
         steps = [...steps]; // Avoid modifying parameters
         while (this.steps > 0 && steps.length > 0) {
@@ -455,6 +465,10 @@ class Unit {
             if (this.isAdj(step) && !game.getTile(step).occupant) {
                 steps.shift();
                 this.steps--;
+                // TODO: Change later with invisible unit detection and other interrupts
+                // And also later implement the differences in what events are sent
+                const loc = this.loc;
+                doubleIt((i, j) => ret[i][j].push({event: "move", params: [[...loc], [...step]]}), 0, 2, 0, 2);
                 this.loc = step;
                 // Add in invisible unit detection things here
                 // Adjust name in references to this unit (owner.unit, for instance)
@@ -463,9 +477,10 @@ class Unit {
                 if (i < 0) throw new Error("Unit not found in owner's unit array");
                 u[i] = [...this.loc]; // To avoid weird things happening
             } else {
-                return; // invalid step
+                break; // invalid step
             }
         }
+        return ret;
     }
     attack(game: GameState, target: Coordinate) {
         if (this.attacks < 1) return; // Out of attacks
@@ -653,10 +668,16 @@ function isInt(num: number, min?: number, max?: number): boolean {
     return (min === undefined || max === undefined) || (num >= min && num <= max);
 }
 
+function isCoord(c: any) {
+    return Array.isArray(c) && c.length === 2 && typeof(c[0]) === "number" && typeof(c[1]) === "number";
+}
+
 // Returns euclidean distance between two coordinates
 function dist(a: Coordinate, b: Coordinate): number {
     return Math.sqrt((a[0]-b[0])**2 + (a[1]-b[1])**2);
 }
+
+const empty = () => [[[], []], [[], []]] as PlayerArr<SocketEvent[]>;
 
 /*// Returns array of all tiles that are within a given radius of a coordinate
 // Coordinate should have integer values, and radius should be nonnegative
@@ -672,4 +693,4 @@ function withinRadius(c: Coordinate, r: number): Coordinate[] {
     return result;
 }*/
 
-export { GameState, PlayerInfo, Card, BuildingStats, Building, UnitStats, Unit }; // Tile, Field
+export { GameState, PlayerInfo, Card, BuildingStats, Building, UnitStats, Unit, isCoord, doubleIt }; // Tile, Field

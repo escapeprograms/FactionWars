@@ -7,7 +7,7 @@ import { socketTable, generateClientId } from "./users.js"
 import { isValidName } from "../Client/functions.js";
 import { createLobby, joinLobby, filterLobby, lobbyTable, verifyLobby } from "./lobby.js";
 import { SocketState, Faction, Game, Player, SocketInfo } from "./types.js";
-import { PlayerInfo, GameState } from "./game.js"
+import { PlayerInfo, GameState, isCoord, doubleIt } from "./game.js"
 
 const clientPath = path.resolve("Client")
 console.log("Serving static from " + clientPath);
@@ -100,6 +100,7 @@ io.on("connection", (socket: Socket) => {
             console.log(socket.id + " has created a new game with id: " + lobby.id);//
         }
         else {
+            // This should not happen from a regular client, as the client should have filtered already
             socket.emit("create-error", "invalid-name");
         }
     });
@@ -128,6 +129,7 @@ io.on("connection", (socket: Socket) => {
                 socket.emit("lobby-join-result", false, result.value);
             }
         } else {
+            // This should not happen from a regular client, as the client should have filtered already
             socket.emit("join-error", "invalid-name");
         }
     });
@@ -147,6 +149,7 @@ io.on("connection", (socket: Socket) => {
         if (!checkState(sock, SocketState.Lobby)) {
             return;
         } if (!(faction === "T" || faction === "M" || faction === "S" || faction === "A")) {
+            // This should not happen from a regular client, as the client should have filtered already
             socket.emit("faction-change-error", "invalid-faction")
         } else {
             const {player, game} = sock.info!;
@@ -174,7 +177,7 @@ io.on("connection", (socket: Socket) => {
             const {player, game} = sock.info!;
             // Verify sender is host (might change or remove this part in the future?)
             if (game.players[0] !== player) {
-                socket.emit("game-start-error", "not-host");
+                socket.emit("game-start-error", "not-host"); // Should implement client to check for this first
             } else if(verifyLobby(game)) {
                 // Start the game
                 game.players.forEach(p=>{
@@ -187,18 +190,29 @@ io.on("connection", (socket: Socket) => {
                 game.players.forEach(p=>sockets.get(p.id)?.emit("game-start", game.gameInfo!.clientCopy(p.playerInfo!.self)));
                 console.log(socket.id + " has started game: " + game.id);//
             } else {
+                // Should we have the client filter this first?
                 socket.emit("game-start-error", "invalid-lobby");
             }
         }
     });
     socket.on("move-unit", (unit, steps) => {
-        return; // TODO
         const sock = socketTable[socket.id];
         if (checkState(sock, SocketState.Game)) {
-            // Validate unit and steps, etc.
+            // Validate unit and steps types (further verification performed in game.move())
+            if (!(isCoord(unit) && Array.isArray(steps) && steps.every(isCoord))) return; // Invalid types
+            
+            const info = sock.info!;
+            const game = info.game.gameInfo!;
+            const events = game.move(info.player.playerInfo!.self, unit, steps);
+            
+            // Broadcast events
+            doubleIt((i, j) => {
+                const s = sockets.get(game.players[i][j].id);
+                events[i][j].forEach(e => s?.emit(e.event, e.params));
+            }, 0, 2, 0, 2);
         }
     });
-    // TODO: Handle move, attack, play card, special actions
+    // TODO: Handle attack, play card, special actions, end turn
 })
 
 server.on("error", (e: string) => {
