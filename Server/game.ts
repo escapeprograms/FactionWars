@@ -1,4 +1,5 @@
 import { CardType, Player, Team, Coordinate, ClientGameState, Faction, PlayerArr, SocketEvent } from "./types.js";
+import { compArr, deepCopy, dist, doubleIt, isCoord, isInt } from "./utility.js";
 import { socketTable } from "./users.js";
 import { withinRadius } from "./../Client/functions.js";
 import b from "./../Client/buildings.json" assert { type: "json" };
@@ -628,55 +629,6 @@ class Building {
     }
 }
 
-function doubleIt(f: (i: number, j: number)=>void, x:number, y:number, xEnd:number, yEnd:number) {
-    for (let i = x; i < xEnd; i++) {
-        for (let j = y; j < yEnd; j++) {
-            f(i, j);
-        }
-    }
-}
-
-function compArr<T>(c1: T[], c2: T[]) {
-    return c1.length === c2.length && c1.every((e, i)=>e === c2[i]);
-}
-
-/*function deepCopy<T>(obj: {[key: string]: T}) {
-    const copy: {[key: string]: T} = {};
-    for (let p in obj) {
-        copy[p] = obj[p];
-    }
-    return copy;
-}*/
-function deepCopy<T>(obj: T): T {
-    if (typeof(obj === "object")) {
-        const copy = {...obj};
-        for (let key in copy) {
-            if (typeof copy[key] === "object") {
-                copy[key] = deepCopy(copy[key]);
-            }
-        }
-        return copy;
-    } else {
-        return obj; // Does not work with functions and symbols
-    }
-}
-
-// Given a number, returns whether or not that number is an integer
-// If given min and max, also checks if the number is within that range (inclusive)
-function isInt(num: number, min?: number, max?: number): boolean {
-    if (num % 1 !== 0) return false;
-    return (min === undefined || max === undefined) || (num >= min && num <= max);
-}
-
-function isCoord(c: any) {
-    return Array.isArray(c) && c.length === 2 && typeof(c[0]) === "number" && typeof(c[1]) === "number";
-}
-
-// Returns euclidean distance between two coordinates
-function dist(a: Coordinate, b: Coordinate): number {
-    return Math.sqrt((a[0]-b[0])**2 + (a[1]-b[1])**2);
-}
-
 const empty = () => [[[], []], [[], []]] as PlayerArr<SocketEvent[]>;
 
 /*// Returns array of all tiles that are within a given radius of a coordinate
@@ -693,4 +645,4 @@ function withinRadius(c: Coordinate, r: number): Coordinate[] {
     return result;
 }*/
 
-export { GameState, PlayerInfo, Card, BuildingStats, Building, UnitStats, Unit, isCoord, doubleIt }; // Tile, Field
+export { GameState, PlayerInfo, Card, BuildingStats, Building, UnitStats, Unit }; // Tile, Field
