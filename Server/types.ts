@@ -1,4 +1,5 @@
-import { PlayerInfo, GameState, Card, Unit, Building } from "./game.js";
+import { GameState, Card, Unit, Building } from "./game.js";
+import { PlayerInfo } from "./player.js";
 
 export type Faction = "T" | "M" | "S" | "A";
 
