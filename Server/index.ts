@@ -7,7 +7,8 @@ import { socketTable, generateClientId } from "./users.js"
 import { isValidName } from "../Client/functions.js";
 import { createLobby, joinLobby, filterLobby, lobbyTable, verifyLobby } from "./lobby.js";
 import { SocketState, Faction, Lobby, Player, SocketInfo } from "./types.js";
-import { PlayerInfo, GameState } from "./game.js";
+import { GameState } from "./game.js";
+import { PlayerInfo } from "./player.js";
 import { isCoord, doubleIt } from "./utility.js";
 
 const clientPath = path.resolve("Client")
