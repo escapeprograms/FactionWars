@@ -3,6 +3,7 @@ import { Building, BuildingStats, Unit, UnitStats, Card, Deck } from "./types.js
 import { compArr, deepCopy, dist, doubleIt, isCoord, isInt } from "./utility.js";
 import { socketTable } from "./users.js";
 import { PlayerInfo } from "./player.js";
+import { TURN_LENGTH } from "../Client/constants.js";
 import b from "./../Client/buildings.json" assert { type: "json" };
 import u from "./../Client/units.json" assert {type: "json"}; // See if this works or needs parsing
 import c from "./../Client/cards.json" assert {type: "json"};
@@ -20,6 +21,8 @@ class GameState {
     public players: PlayerArr<Player> = [[], []]; // [Team0Players, Team1Players]
     public buildings: Building[] = []; // Contains the only references to in play buildings
     public units: Unit[] = []; // Contains the only references to in play units
+    private turnEnd: PlayerArr<boolean> = [[false, false], [false, false]]; // Whether each player has ended their turn
+    private timerID = NaN; // Id for setTimeout();
 
     constructor (players: Player[], fieldSize=50) {
         players.forEach(p=>{
@@ -105,6 +108,9 @@ class GameState {
     }
 
     endTurn() {
+        // Clear timer
+        clearTimeout(this.timerID);
+
         // Activate end of turn effects, as applicable
         this.buildings.forEach(b=>b.endTurn(this));
         this.units.forEach(u=>u.endTurn()); // Currently does nothing
@@ -118,7 +124,16 @@ class GameState {
         this.units.forEach(u=>u.startTurn());
         // Players draw a card at the start of their turn
         this.players[this.turn].forEach(p => p.playerInfo!.draw());
-        // Start timer?
+        // Reset the team's turnEnd status
+        this.turnEnd[this.turn] = this.turnEnd[this.turn].map(_=>false);
+        // Start timer
+        this.timerID = setTimeout((_: never)=> this.endTurn(), TURN_LENGTH);
+    }
+
+    // Ends the player's turn, assumes valid coordinate
+    end(player:Coordinate) {
+        this.turnEnd[player[0]][player[1]] = true;
+        if (this.turnEnd[player[0]][1-player[1]]) this.endTurn();
     }
 
     getPlayer(c: Coordinate) {
@@ -204,7 +219,6 @@ class GameState {
     }
 
     move(player: Coordinate, unit: Coordinate, steps: Coordinate[]): PlayerArr<SocketEvent[]> {
-        // TODO: Return double array of event arrays
         const p = this.getPlayer(player);
         const u = this.getUnit(unit);
         if (!p || p.team !== this.turn) return emptyPArr(); // Not a player or not their turn
