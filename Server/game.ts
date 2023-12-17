@@ -1,13 +1,13 @@
 import { CardType, Player, Team, Coordinate, ClientGameState, Faction, PlayerArr, emptyPArr, SocketEvent } from "./types.js";
+import { Building, BuildingStats, Unit, UnitStats, Card, Deck } from "./types.js";
 import { compArr, deepCopy, dist, doubleIt, isCoord, isInt } from "./utility.js";
 import { socketTable } from "./users.js";
 import { PlayerInfo } from "./player.js";
-import { Building, BuildingStats } from "./building.js";
-import { Unit, UnitStats } from "./unit.js";
-import { Card, Deck } from "./card.js";
 import b from "./../Client/buildings.json" assert { type: "json" };
 import u from "./../Client/units.json" assert {type: "json"}; // See if this works or needs parsing
 import c from "./../Client/cards.json" assert {type: "json"};
+
+export { GameState, buildings, units, cards }; // Tile, Field
 
 const buildings = b as {[key: string]: BuildingStats}; // To establish type
 const units = u as {[key: string]: UnitStats};
@@ -246,5 +246,3 @@ function withinRadius(c: Coordinate, r: number): Coordinate[] {
     }
     return result;
 }*/
-
-export { GameState, Card, Deck, BuildingStats, Building, UnitStats, Unit, buildings, units, cards }; // Tile, Field

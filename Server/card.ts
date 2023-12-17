@@ -1,7 +1,7 @@
 import { CardType, Faction } from "./types.js"
 import { deepCopy } from "./utility.js"
 
-export {Card, Deck}
+export { Card, Deck };
 
 type Card = {
     name: string, // internal identifier

@@ -1,7 +1,5 @@
-import { Coordinate, PlayerArr, emptyPArr, SocketEvent } from "./types.js";
-import { Card, Deck, Building, GameState, units, buildings } from "./game.js";
+import { Coordinate, PlayerArr, emptyPArr, SocketEvent, Building, GameState } from "./types.js";
 import { compArr, dist, doubleIt } from "./utility.js";
-import { PlayerInfo } from "./player.js";
 import { withinRadius } from "../Client/functions.js";
 
 export {Unit, UnitStats};

@@ -1,5 +1,14 @@
-import { GameState, Card, Unit, Building } from "./game.js";
+import { GameState } from "./game.js";
+import { Card } from "./card.js";
+import { Unit } from "./unit.js";
+import { Building } from "./building.js";
 import { PlayerInfo } from "./player.js";
+
+export * from "./building.js";
+export * from "./unit.js";
+export * from "./card.js";
+export * from "./game.js";
+export * from "./player.js";
 
 export type Faction = "T" | "M" | "S" | "A";
 

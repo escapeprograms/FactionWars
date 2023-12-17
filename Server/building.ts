@@ -1,5 +1,4 @@
-import { Coordinate, Player } from "./types.js";
-import { Card, Deck, Unit, GameState, units, buildings } from "./game.js";
+import { Coordinate, Player, Unit, GameState } from "./types.js";
 import { dist, doubleIt } from "./utility.js";
 import { PlayerInfo } from "./player.js";
 import { withinRadius } from "../Client/functions.js";

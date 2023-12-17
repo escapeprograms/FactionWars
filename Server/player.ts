@@ -1,5 +1,4 @@
-import { Coordinate, Player } from "./types.js";
-import { Card, Deck, GameState, units, buildings } from "./game.js";
+import { Coordinate, Player,  Card, Deck, GameState, units, buildings } from "./types.js";
 import { compArr, isInt } from "./utility.js";
 
 export class PlayerInfo {
