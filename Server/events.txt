@@ -33,5 +33,6 @@ move (gives original loc, new loc, tells client thing (usually a unit) at origin
 change-money (gives player Coordinate, amount, tells client change in a player's money amount)
 change-energy (gives player Coordinate, amount, tells client change in a player's energy amount)
 change-tot-energy (gives player Coordinate, amount, tells client change in a player's total energy amount)
-building-activated (gives building Coordinate, tels client building has been activated)
-building-deactivated (gives building Coordinate, tels client building has been activated)
+building-activated (gives building Coordinate, tells client building has been activated)
+building-deactivated (gives building Coordinate, tells client building has been activated)
+build-tick (gives building Coordinate, amount, tells client building has ticked by that amount)

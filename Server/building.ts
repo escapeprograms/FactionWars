@@ -1,5 +1,5 @@
 import { Coordinate, Player, Unit, GameState, emptyPArr, PlayerArr, SocketEvent, Events } from "./types.js";
-import { concatEvents, dist, doubleIt } from "./utility.js";
+import { compArr, concatEvents, dist, doubleIt } from "./utility.js";
 import { PlayerInfo } from "./player.js";
 import { withinRadius } from "../Client/functions.js";
 
@@ -39,12 +39,44 @@ class Building {
         const ret = emptyPArr<SocketEvent>();
         // Decrement construction time
         if (this.buildLeft > 0) {
-            // TODO: Refine to new building mechanics
-            if (--this.buildLeft === 0) {
+            let build = 0;
+            // There's a lot of code duplication here... potentially revise?
+            // Iterate above and below
+            let x, y;
+            if ((y = this.loc[1]-1) >= 0) {
+                for (x = this.loc[0]; x < this.loc[0]+this.stats.size; x++) {
+                    let unit = game.getUnit([x, y]);
+                    if (unit && compArr(unit.owner, this.owner)) build += 2; // Refine later when we have special keywords/abilities for building
+                }
+            }
+            if ((y = this.loc[1]+this.stats.size) < game.fieldSize) {
+                for (x = this.loc[0]; x < this.loc[0]+this.stats.size; x++) {
+                    let unit = game.getUnit([x, y]);
+                    if (unit && compArr(unit.owner, this.owner)) build += 2; // Refine later when we have special keywords/abilities for building
+                }
+            }
+            // Iterate left and right
+            if ((x = this.loc[0]-1) >= 0) {
+                for (y = this.loc[1]; y < this.loc[1]+this.stats.size; y++) {
+                    let unit = game.getUnit([x, y]);
+                    if (unit && compArr(unit.owner, this.owner)) build += 2; // Refine later when we have special keywords/abilities for building
+                }
+            }
+            if ((x = this.loc[0]+this.stats.size) < game.fieldSize) {
+                for (y = this.loc[1]; y < this.loc[1]+this.stats.size; y++) {
+                    let unit = game.getUnit([x, y]);
+                    if (unit && compArr(unit.owner, this.owner)) build += 2; // Refine later when we have special keywords/abilities for building
+                }
+            }
+            
+            // Do we want to send all the build ticks or just enough so that it reaches 0?
+            doubleIt((i, j) => ret[i][j].push({event: "build-tick", params: [[...this.loc], build]}), 0, 0, 2, 2);
+            if ((this.buildLeft -= build) <= 0) {
+                this.buildLeft = 0;
                 concatEvents(ret, this.activate(game.getPlayer(this.owner).playerInfo!));
             }
         }
-        // Maybe more stuff here, such as end of tern effects, as applicable
+        // Maybe more stuff here, such as end of turn effects, as applicable
         return ret;
     }
     startTurn(game: GameState): PlayerArr<SocketEvent[]> {
