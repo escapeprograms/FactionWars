@@ -1,5 +1,5 @@
-import { Coordinate, Player, Unit, GameState } from "./types.js";
-import { dist, doubleIt } from "./utility.js";
+import { Coordinate, Player, Unit, GameState, emptyPArr, PlayerArr, SocketEvent, Events } from "./types.js";
+import { concatEvents, dist, doubleIt } from "./utility.js";
 import { PlayerInfo } from "./player.js";
 import { withinRadius } from "../Client/functions.js";
 
@@ -32,44 +32,65 @@ class Building {
         this.owner = player;
         this.health = stats.maxHealth;
         this.buildLeft = stats.buildTime;
-        this.activate(game.getPlayer(player).playerInfo!);
+        // this.activate(game.getPlayer(player).playerInfo!); // TODO: Manual activation needed
     }
     // Takes in the GameState
-    endTurn(game: GameState) {
+    endTurn(game: GameState): Events {
+        const ret = emptyPArr<SocketEvent>();
         // Decrement construction time
         if (this.buildLeft > 0) {
+            // TODO: Refine to new building mechanics
             if (--this.buildLeft === 0) {
-                this.activate(game.getPlayer(this.owner).playerInfo!);
+                concatEvents(ret, this.activate(game.getPlayer(this.owner).playerInfo!));
             }
         }
         // Maybe more stuff here, such as end of tern effects, as applicable
+        return ret;
     }
-    startTurn(owner: PlayerInfo) {
+    startTurn(game: GameState): PlayerArr<SocketEvent[]> {
+        const owner = game.getPlayer(this.owner).playerInfo!;
+        const ret = emptyPArr<SocketEvent>();
         // Generate, if active
         if(this.active) {
-            owner.money += this.stats.moneyGen;
+            if (this.stats.moneyGen !== 0) {
+                owner.money += this.stats.moneyGen;
+                doubleIt((i, j)=>ret[i][j].push({event: "change-money", params: [[...this.owner], this.stats.moneyGen]}), 0, 0, 2, 2);
+            }
             this.attacks = this.stats.damage > 0 ? 1 : 0;
             // Maybe other effects here
         }
+        return ret;
     }
     // Returns whether or not it is active
     // Pass in owner's PlayerInfo
-    activate(owner: PlayerInfo): boolean {
+    activate(owner: PlayerInfo): Events {
+        const ret = emptyPArr<SocketEvent>();
         if (!this.active && this.buildLeft === 0 && this.stats.upkeep <= owner.energy) {
             owner.energy += this.stats.energyGen - this.stats.upkeep;
             owner.totalEnergy += this.stats.energyGen;
             this.active = true;
+            doubleIt((i, j)=>ret[i][j].push(
+                {event: "building-activated", params: [[...this.loc]]},
+                {event: "change-energy", params: [[...this.owner], -this.stats.upkeep]},
+                {event: "change-tot-energy", params: [[...this.owner], this.stats.energyGen]}
+            ), 0, 0, 2, 2);
         }
-        return this.active;
+        return ret;
     }
-    // Pass in owner's PlayerInfo
-    deactivate(game: GameState) {
+    deactivate(game: GameState): Events {
+        const ret = emptyPArr<SocketEvent>();
         if (this.active) {
             const owner = game.getPlayer(this.owner).playerInfo!;
             owner.energy -= this.stats.energyGen - this.stats.upkeep;
             owner.totalEnergy -= this.stats.energyGen;
             this.active = false;
+            doubleIt((i, j)=>ret[i][j].push(
+                {event: "building-deactivated", params: [[...this.loc]]},
+                {event: "change-energy", params: [[...this.owner], this.stats.upkeep]},
+                {event: "change-tot-energy", params: [[...this.owner], -this.stats.energyGen]}
+            ), 0, 0, 2, 2);
         }
+        return ret;
     }
     attack(game: GameState, target: Coordinate) {
         if (this.attacks < 1 || this.stats.damage === 0) return; // Out of attacks / Cannot attack

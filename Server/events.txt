@@ -30,3 +30,8 @@ faction-change (gives clientId and new faction, tells client other client in lob
 game-start-error (gives error, tells client error in starting game)
 game-start (gives game, tells client game has started)
 move (gives original loc, new loc, tells client thing (usually a unit) at original loc moved to new loc)
+change-money (gives player Coordinate, amount, tells client change in a player's money amount)
+change-energy (gives player Coordinate, amount, tells client change in a player's energy amount)
+change-tot-energy (gives player Coordinate, amount, tells client change in a player's total energy amount)
+building-activated (gives building Coordinate, tels client building has been activated)
+building-deactivated (gives building Coordinate, tels client building has been activated)
