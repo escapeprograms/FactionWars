@@ -73,7 +73,7 @@ class Building {
             doubleIt((i, j) => ret[i][j].push({event: "build-tick", params: [[...this.loc], build]}), 0, 0, 2, 2);
             if ((this.buildLeft -= build) <= 0) {
                 this.buildLeft = 0;
-                concatEvents(ret, this.activate(game.getPlayer(this.owner).playerInfo!));
+                concatEvents(ret, this.activate(game));
             }
         }
         // Maybe more stuff here, such as end of turn effects, as applicable
@@ -95,7 +95,8 @@ class Building {
     }
     // Returns whether or not it is active
     // Pass in owner's PlayerInfo
-    activate(owner: PlayerInfo): Events {
+    activate(game: GameState): Events {
+        const owner = game.getPlayer(this.owner).playerInfo!;
         const ret = emptyPArr<SocketEvent>();
         if (!this.active && this.buildLeft === 0 && this.stats.upkeep <= owner.energy) {
             owner.energy += this.stats.energyGen - this.stats.upkeep;

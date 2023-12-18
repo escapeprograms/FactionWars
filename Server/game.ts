@@ -1,6 +1,6 @@
-import { CardType, Player, Team, Coordinate, ClientGameState, Faction, PlayerArr, emptyPArr, SocketEvent } from "./types.js";
+import { CardType, Player, Team, Coordinate, ClientGameState, Faction, PlayerArr, emptyPArr, SocketEvent, Events } from "./types.js";
 import { Building, BuildingStats, Unit, UnitStats, Card, Deck } from "./types.js";
-import { compArr, deepCopy, dist, doubleIt, isCoord, isInt } from "./utility.js";
+import { concatEvents, compArr, deepCopy, doubleIt, isCoord, isInt } from "./utility.js";
 import { socketTable } from "./users.js";
 import { PlayerInfo } from "./player.js";
 import { TURN_LENGTH } from "../Client/constants.js";
@@ -68,19 +68,20 @@ class GameState {
     }
 
     // Spawns a building with its top left corner at (x, y)
-    // Not sure what to return if invalid
-    spawnBuilding(building: BuildingStats, x:number, y:number, owner: Coordinate): Building | null {
+    // Returns socket events for the building spawn
+    spawnBuilding(building: BuildingStats, x:number, y:number, owner: Coordinate): Events {
+        const ret = emptyPArr<SocketEvent>();
         // Verify placement
         if (this.verifyPlacement(building.size, x, y)) {
             doubleIt((i, j)=>this.field[i][j].occupy([x, y], "building"), x, y, x+building.size, y+building.size);
             this.getPlayer(owner).playerInfo!.buildings.push([x, y]); // Assumes playerinfo is not null
             const b = new Building(this, [x, y], building, owner);
             this.buildings.push(b);
-            // Maybe add stuff for build time?
-            return b;
-        } else  {
-            return null;
+            doubleIt((i, j) => ret[i][j].push({event: "building-spawn", params: [[...owner], [x, y]]}), 0, 0, 2, 2);
+            // Attempt to activate building
+            concatEvents(ret, b.activate(this));
         }
+        return ret;
     }
     spawnUnit(unit: UnitStats, x:number, y:number, owner: Coordinate): Unit | null {
         if (!this.field[x][y].occupant) {
@@ -111,28 +112,34 @@ class GameState {
         /*// Clear timer
         clearTimeout(this.timerID);*/
 
+        const ret = emptyPArr<SocketEvent>();
+
         // Activate end of turn effects, as applicable
-        this.buildings.forEach(b=>b.endTurn(this));
-        this.units.forEach(u=>u.endTurn()); // Currently does nothing
+        this.buildings.forEach(b=>concatEvents(ret, b.endTurn(this)));
+        this.units.forEach(u=>concatEvents(ret, u.endTurn()));
         this.turn = 1 - this.turn;
 
-        // TODO: Do event info & add start turn event message
-        return emptyPArr();
-        // call startTurn() here?
+        return ret;
+        // Turn start needs to be called separately
     }
 
     startTurn(): PlayerArr<SocketEvent[]> {
+        const ret = emptyPArr<SocketEvent>();
+
         // Activate start of turn effects, as applicable
-        this.buildings.forEach(b=>b.startTurn(this));
-        this.units.forEach(u=>u.startTurn());
+        this.buildings.forEach(b=>concatEvents(ret, b.startTurn(this)));
+        this.units.forEach(u=>concatEvents(ret, u.startTurn()));
+
         // Players draw a card at the start of their turn
-        this.players[this.turn].forEach(p => p.playerInfo!.draw());
+        this.players[this.turn].forEach(p => concatEvents(ret, p.playerInfo!.draw()));
+
         // Reset the team's turnEnd status
         this.turnEnd[this.turn] = this.turnEnd[this.turn].map(_=>false);
+
         /*// Start timer
         this.timerID = setTimeout(()=> this.endTurn(), TURN_LENGTH);*/
-        // TODO: Do event info & add end turn event message
-        return emptyPArr();
+
+        return ret;
     }
 
     // Ends a player's turn and returns whether or not the entire turn can be ended
