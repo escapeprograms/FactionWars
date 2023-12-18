@@ -31,14 +31,16 @@ class Unit {
         this.owner = player;
         this.health = stats.maxHealth;
     }
-    startTurn() {
+    startTurn(): PlayerArr<SocketEvent[]> {
         // Do start turn stuff here, if any
         this.steps = this.stats.speed;
         this.moves = 1;
         this.attacks = 1;
+        return emptyPArr();
     }
-    endTurn() {
+    endTurn(): PlayerArr<SocketEvent[]> {
         // Do end turn stuff here, if any
+        return emptyPArr();
     }
     move(game: GameState, steps: Coordinate[]): PlayerArr<SocketEvent[]> {
         const ret: PlayerArr<SocketEvent[]> = emptyPArr();

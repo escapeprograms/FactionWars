@@ -80,6 +80,8 @@ export type SocketEvent = {event: string, params: any}
 export type PlayerArr<T> = [T[], T[]];
 export const emptyPArr = <T>() => [[[], []], [[], []]] as PlayerArr<T[]>;
 
+export type Events = PlayerArr<SocketEvent[]>;
+
 export type ClientGameState = {
     turn: number,
     // field (are we sending the field over?)
