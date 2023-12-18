@@ -1,5 +1,6 @@
-import { Coordinate, Player,  Card, Deck, GameState, units, buildings } from "./types.js";
-import { compArr, isInt } from "./utility.js";
+import { Coordinate, Events, SocketEvent, Player, Card, Deck, GameState, units, buildings, emptyPArr } from "./types.js";
+import { compArr, concatEvents, doubleIt, isInt } from "./utility.js";
+import { MAX_HAND_SIZE } from "../Client/constants.js";
 
 export class PlayerInfo {
     public self: Coordinate;
@@ -13,18 +14,26 @@ export class PlayerInfo {
     constructor(self: Coordinate) {
         this.self = self;
     }
-    draw() {
+    draw(): Events {
+        const ret = emptyPArr<SocketEvent>();
         const card = this.deck.draw();
-        if (!card) {console.log("No card drawn"); throw new Error("Failed to draw a card");} //TODO Fix later
-        if (this.cards.length >= 10) { // Currently, hand size is 10
-            this.deck.add(card); // Immediately discard; hand is full
+        if (!card) {console.log("No card drawn"); return ret;} // Potentially change later, but for now, the draw just fails
+        doubleIt((i, j) => 
+            ret[i][j].push({event: "card-drawn", params: (i === this.self[0] && j === this.self[1] ? [[...this.self], card] : [[...this.self]])}), 
+        0, 0, 2, 2);
+        this.cards.push(card); // Add card to hand
+        if (this.cards.length >= MAX_HAND_SIZE) {
+            concatEvents(ret, this.discard(this.cards.length - 1)); // Immediately discard; hand is full
             console.log("Hand is full, drawn card immediately discarded");
-        } else this.cards.push(card); // Add card to hand
+        }
+        return ret;
     }
-    discard(index: number): boolean {
-        if (!isInt(index, 0, this.cards.length - 1)) return false;
+    discard(index: number): Events {
+        const ret = emptyPArr<SocketEvent>();
+        if (!isInt(index, 0, this.cards.length - 1)) return ret; // Invalid discard
         this.deck.add(this.cards.splice(index, 1)[0]);
-        return true;
+        doubleIt((i, j) => ret[i][j].push({event: "card-discarded", params: [...this.self, index]}), 0, 0, 2, 2);
+        return ret;
     }
     // Deactivates buildings until energy is nonnegative
     // Pass in game

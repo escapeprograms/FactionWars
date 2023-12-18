@@ -68,6 +68,7 @@ Units
 Cards
  - Players start the game with 5 Cards
  - Players draw 1 card per turn
+ - If the deck is empty when a draw is attempted, the draw just fails (no card is drawn)
  - *Above card rules are liable to change
 
 Spawning
