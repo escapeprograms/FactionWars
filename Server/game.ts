@@ -21,8 +21,8 @@ class GameState {
     public players: PlayerArr<Player> = [[], []]; // [Team0Players, Team1Players]
     public buildings: Building[] = []; // Contains the only references to in play buildings
     public units: Unit[] = []; // Contains the only references to in play units
-    private turnEnd: PlayerArr<boolean> = [[false, false], [false, false]]; // Whether each player has ended their turn
-    private timerID = NaN; // Id for setTimeout();
+    public turnEnd: PlayerArr<boolean> = [[false, false], [false, false]]; // Whether each player has ended their turn
+    public timerID = setTimeout(()=>undefined, 1); // Id for setTimeout();
 
     constructor (players: Player[], fieldSize=50) {
         players.forEach(p=>{
@@ -107,33 +107,41 @@ class GameState {
         return valid;
     }
 
-    endTurn() {
-        // Clear timer
-        clearTimeout(this.timerID);
+    endTurn(): PlayerArr<SocketEvent[]> {
+        /*// Clear timer
+        clearTimeout(this.timerID);*/
 
         // Activate end of turn effects, as applicable
         this.buildings.forEach(b=>b.endTurn(this));
         this.units.forEach(u=>u.endTurn()); // Currently does nothing
         this.turn = 1 - this.turn;
+
+        // TODO: Do event info & add start turn event message
+        return emptyPArr();
         // call startTurn() here?
     }
 
-    startTurn() {
+    startTurn(): PlayerArr<SocketEvent[]> {
         // Activate start of turn effects, as applicable
-        this.buildings.forEach(b=>b.startTurn(this.getPlayer(b.owner).playerInfo!));
+        this.buildings.forEach(b=>b.startTurn(this));
         this.units.forEach(u=>u.startTurn());
         // Players draw a card at the start of their turn
         this.players[this.turn].forEach(p => p.playerInfo!.draw());
         // Reset the team's turnEnd status
         this.turnEnd[this.turn] = this.turnEnd[this.turn].map(_=>false);
-        // Start timer
-        this.timerID = setTimeout((_: never)=> this.endTurn(), TURN_LENGTH);
+        /*// Start timer
+        this.timerID = setTimeout(()=> this.endTurn(), TURN_LENGTH);*/
+        // TODO: Do event info & add end turn event message
+        return emptyPArr();
     }
 
-    // Ends the player's turn, assumes valid coordinate
-    end(player:Coordinate) {
-        this.turnEnd[player[0]][player[1]] = true;
-        if (this.turnEnd[player[0]][1-player[1]]) this.endTurn();
+    // Ends a player's turn and returns whether or not the entire turn can be ended
+    end(player: Coordinate): boolean {
+        if (player.every(x => isInt(x, 0, 1)) && this.getPlayer(player).team === this.turn) {
+            this.turnEnd[player[0]][player[1]] = true;
+            return this.turnEnd[player[0]][1-player[1]]
+        }
+        return false;
     }
 
     getPlayer(c: Coordinate) {

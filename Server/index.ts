@@ -5,8 +5,9 @@ import { Server, Socket } from "socket.io";
 
 import { socketTable, generateClientId } from "./users.js"
 import { isValidName } from "../Client/functions.js";
+import { TURN_LENGTH } from "../Client/constants.js";
 import { createLobby, joinLobby, filterLobby, lobbyTable, verifyLobby } from "./lobby.js";
-import { SocketState, Faction, Lobby, Player, SocketInfo, GameState, PlayerInfo } from "./types.js";
+import { SocketState, Faction, Lobby, Player, SocketInfo, GameState, PlayerInfo, PlayerArr, SocketEvent } from "./types.js";
 import { isCoord, doubleIt } from "./utility.js";
 
 const clientPath = path.resolve("Client")
@@ -27,6 +28,27 @@ io.on("connection", (socket: Socket) => {
             return false;
         }
         return true;
+    }
+
+    function sendEvents(events: PlayerArr<SocketEvent[]>, game: GameState) {
+        // Assumes 2 teams and 2 players per team
+        doubleIt((i, j) => {
+            const s = sockets.get(game.players[i][j].id);
+            events[i][j].forEach(e => s?.emit(e.event, e.params));
+        }, 0, 2, 0, 2);
+    }
+
+    function startTurn(game: GameState) {
+        const events = game.startTurn();
+        game.timerID = setTimeout(() => endTurn(game), TURN_LENGTH);
+        sendEvents(events, game);
+    }
+
+    function endTurn(game: GameState) {
+        clearTimeout(game.timerID);
+        const events = game.endTurn();
+        sendEvents(events, game);
+        startTurn(game);
     }
 
 
@@ -189,6 +211,7 @@ io.on("connection", (socket: Socket) => {
                 // Send specialized GameState to each player
                 lobby.players.forEach(p=>sockets.get(p.id)?.emit("game-start", lobby.gameInfo!.clientCopy(p.playerInfo!.self)));
                 console.log(socket.id + " has started game: " + lobby.id);//
+                startTurn(lobby.gameInfo);
             } else {
                 // Should we have the client filter this first?
                 socket.emit("game-start-error", "invalid-lobby");
