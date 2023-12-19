@@ -125,27 +125,34 @@ class Building {
         }
         return ret;
     }
-    attack(game: GameState, target: Coordinate) {
-        if (this.attacks < 1 || this.stats.damage === 0) return; // Out of attacks / Cannot attack
-        if (dist(this.loc, target) > this.stats.range) return; // Out of range
-        if (!game.sight(this.loc, target)) return; // Cannot see target
-        if (this.stats.splash <= 0 && !game.getTile(target).occupant) return; // Non-splashers cannot attack empty tile
+    attack(game: GameState, target: Coordinate): Events {
+        const ret = emptyPArr<SocketEvent>();
+        if (this.attacks < 1 || this.stats.damage === 0) return ret; // Out of attacks / Cannot attack
+        if (dist(this.loc, target) > this.stats.range) return ret; // Out of range
+        if (!game.sight(this.loc, target)) return ret; // Cannot see target
+        if (this.stats.splash <= 0 && !game.getTile(target).occupant) return ret; // Non-splashers cannot attack empty tile
+        doubleIt((i, j) => ret[i][j].push({event: "attack", params: [[...this.loc], [...target]]}), 0, 2, 0, 2);
         // Eventually special effects as needed
         // NOTE: The code does not check for friendly fire!
         // Will have to adjust victim finding if field ever becomes non-square
         let victim;
         (withinRadius(target, this.stats.splash, 0, 0, game.fieldSize-1, game.fieldSize-1) as Coordinate[]).forEach(v => {
-            if (victim = game.getOccupant(v) as Unit | Building | null) victim.takeDamage(game, this.stats.damage);
+            if (victim = game.getOccupant(v) as Unit | Building | null) concatEvents(ret, victim.takeDamage(game, this.stats.damage));
         });
         
         this.attacks--;
+        return ret;
     }
-    takeDamage(game: GameState, damage: number) {
+    takeDamage(game: GameState, damage: number): Events {
         // Eventually implement special abilities as necessary
+        const ret = emptyPArr<SocketEvent>();
         this.health -= damage;
-        if (this.health <= 0) this.die(game);
+        doubleIt((i, j) => ret[i][j].push({event: "took-damage", params: [[...this.loc], damage]}), 0, 2, 0, 2);
+        if (this.health <= 0) concatEvents(ret, this.die(game));
+        return ret;
     }
-    die(game: GameState) {
+    die(game: GameState): Events {
+        const ret = emptyPArr<SocketEvent>();
         // Eventually, implement on death effects (if any)
         // Remove from building list
         let i = game.buildings.findIndex(u => u.loc === this.loc);
@@ -159,8 +166,11 @@ class Building {
         // Remove from tiles
         doubleIt((i, j) => game.field[i][j].leave(), this.loc[0], this.loc[1], this.loc[0] + this.stats.size, this.loc[1] + this.stats.size);
         // Deactivate as this is no longer producing energy
-        this.deactivate(game);
-        game.getPlayer(this.owner).playerInfo!.upkeep(game);
+        concatEvents(ret, this.deactivate(game));
+        concatEvents(ret, game.getPlayer(this.owner).playerInfo!.upkeep(game));
+        // Return events
+        doubleIt((i, j) => ret[i][j].push({event: "death", params: [[...this.loc]]}), 0, 2, 0, 2);
+        return ret;
         // There should be no more references to this unit so it can be garbage collected?
     }
 }

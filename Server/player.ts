@@ -37,14 +37,16 @@ export class PlayerInfo {
     }
     // Deactivates buildings until energy is nonnegative
     // Pass in game
-    upkeep(game: GameState) {
+    upkeep(game: GameState): Events {
+        const ret = emptyPArr<SocketEvent>();
         const buildings = game.buildings;
         let i = buildings.length;
         while (this.energy < 0) {
             if (compArr(this.self, buildings[--i].owner) && buildings[i].stats.upkeep > 0) {
-                buildings[i].deactivate(game);
+                concatEvents(ret, buildings[i].deactivate(game));
             }
         }
+        return ret;
     }
     // Plays the card at the specified index
     // Returns true on success

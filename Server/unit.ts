@@ -1,5 +1,5 @@
-import { Coordinate, PlayerArr, emptyPArr, SocketEvent, Building, GameState } from "./types.js";
-import { compArr, dist, doubleIt } from "./utility.js";
+import { Coordinate, PlayerArr, emptyPArr, SocketEvent, Events, Building, GameState } from "./types.js";
+import { compArr, concatEvents, dist, doubleIt } from "./utility.js";
 import { withinRadius } from "../Client/functions.js";
 
 export {Unit, UnitStats};
@@ -69,27 +69,33 @@ class Unit {
         }
         return ret;
     }
-    attack(game: GameState, target: Coordinate) {
-        if (this.attacks < 1) return; // Out of attacks
-        if (dist(this.loc, target) > this.stats.range) return; // Out of range
-        if (!game.sight(this.loc, target)) return; // Cannot see target
-        if (this.stats.splash <= 0 && !game.getTile(target).occupant) return; // Non-splashers cannot attack empty tile
-        // Eventually special effects as needed
+    attack(game: GameState, target: Coordinate): Events {
+        const ret = emptyPArr<SocketEvent>();
+        if (this.attacks < 1) return ret; // Out of attacks
+        if (dist(this.loc, target) > this.stats.range) return ret; // Out of range
+        if (!game.sight(this.loc, target)) return ret; // Cannot see target
+        if (this.stats.splash <= 0 && !game.getTile(target).occupant) return ret; // Non-splashers cannot attack empty tile
+        doubleIt((i, j) => ret[i][j].push({event: "attack", params: [[...this.loc], [...target]]}), 0, 2, 0, 2);
+        // Eventually add special effects as needed
         // NOTE: The code does not check for friendly fire!
         // Will have to adjust victim finding if field ever becomes non-square
         let victim;
         (withinRadius(target, this.stats.splash, 0, 0, game.fieldSize-1, game.fieldSize-1) as Coordinate[]).forEach(v => {
-            if (victim = game.getOccupant(v) as Unit | Building | null) victim.takeDamage(game, this.stats.damage);
+            if (victim = game.getOccupant(v) as Unit | Building | null) concatEvents(ret, victim.takeDamage(game, this.stats.damage));
         });
         
         this.attacks--;
+        return ret;
     }
-    takeDamage(game: GameState, damage: number) {
+    takeDamage(game: GameState, damage: number): Events {
         // Eventually implement special abilities as necessary
+        const ret = emptyPArr<SocketEvent>();
         this.health -= damage;
-        if (this.health <= 0) this.die(game);
+        doubleIt((i, j) => ret[i][j].push({event: "took-damage", params: [[...this.loc], damage]}), 0, 2, 0, 2);
+        if (this.health <= 0) concatEvents(ret, this.die(game));
+        return ret;
     }
-    die(game: GameState) {
+    die(game: GameState): Events {
         // Eventually, implement on death effects (if any)
         // Remove from unit list
         let i = game.units.findIndex(u => u.loc === this.loc);
@@ -102,6 +108,10 @@ class Unit {
         u.splice(i, 1);
         // Remove from tile
         game.getTile(this.loc).leave();
+        // Return events
+        const ret = emptyPArr<SocketEvent>();
+        doubleIt((i, j) => ret[i][j].push({event: "death", params: [[...this.loc]]}), 0, 2, 0, 2);
+        return ret;
         // There should be no more references to this unit so it can be garbage collected?
     }
     isAdj(loc: Coordinate): boolean {
