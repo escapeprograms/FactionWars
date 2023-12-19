@@ -64,6 +64,10 @@ Units
          in order to block line of sight.
  - Sight (for purposes of fog of war, which is not currently implemented)
     - Uses euclidean distance & line of sight
+ - Attacking
+    - Non-splash attacks may not target empty tiles
+    - Units may not target themselves with their own attacks
+    - Currently, friendly fire is otherwise permitted
 
 Cards
  - Players start the game with 5 Cards

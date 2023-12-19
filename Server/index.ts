@@ -34,7 +34,7 @@ io.on("connection", (socket: Socket) => {
         // Assumes 2 teams and 2 players per team
         doubleIt((i, j) => {
             const s = sockets.get(game.players[i][j].id);
-            events[i][j].forEach(e => s?.emit(e.event, e.params));
+            events[i][j].forEach(e => s?.emit(e.event, ...e.params));
         }, 0, 2, 0, 2);
     }
 
@@ -237,13 +237,21 @@ io.on("connection", (socket: Socket) => {
             const events = game.move(info.player.playerInfo!.self, unit, steps);
             
             // Broadcast events
-            doubleIt((i, j) => {
-                const s = sockets.get(game.players[i][j].id);
-                events[i][j].forEach(e => s?.emit(e.event, e.params));
-            }, 0, 2, 0, 2);
+            sendEvents(events, game);
         }
     });
-    // TODO: Handle attack, play card, special actions, end turn
+    socket.on("attack", (source, target) => {
+        const sock = socketTable[socket.id];
+        if (checkState(sock, SocketState.Game)) {
+            // Validate correct input types
+            if (!isCoord(source) || !isCoord(target)) return;
+            const game = sock.info!.lobby.gameInfo!;
+            const events = game.attack(sock.info!.player.playerInfo!.self, source, target);
+
+            sendEvents(events, game);
+        }
+    });
+    // TODO: Handle play card, special actions, win condition
 })
 
 server.on("error", (e: string) => {

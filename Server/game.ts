@@ -171,7 +171,7 @@ class GameState {
         else return null;
     }
     getOccupant(c: Coordinate) {
-        return this.get(c, this.getTile(c).occupantType);
+        return this.get(c, this.getTile(c).occupantType) as Building | Unit | null | undefined;
     }
     // Returns a ClientGameState for the specified client, if any
     clientCopy(player?: Coordinate): ClientGameState {
@@ -238,7 +238,18 @@ class GameState {
         const u = this.getUnit(unit);
         if (!p || p.team !== this.turn) return emptyPArr(); // Not a player or not their turn
         if (!u || !compArr(u.owner, player)) return emptyPArr(); // Not a valid unit or not their unit
+        if (steps.some(s => !s.every(x => isInt(x, 0, this.fieldSize - 1)))) return emptyPArr(); // Invalid coordinate
         return u.move(this, steps);
+    }
+
+    attack(player: Coordinate, source: Coordinate, target: Coordinate): Events {
+        // TODO
+        const p = this.getPlayer(player);
+        const o = this.getOccupant(source);
+        if (!p || p.team !== this.turn) return emptyPArr();
+        if (!o || !compArr(o.owner, player)) return emptyPArr();
+        if (compArr(source, target) || !target.every(x => isInt(x, 0, this.fieldSize - 1))) return emptyPArr(); // Invalid target coordinate
+        return o.attack(this, target);
     }
 }
 
