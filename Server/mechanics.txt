@@ -38,5 +38,8 @@ Buildings
   - Construction
     - Adjacent units contribute to building construction
     - At the end of each turn, build time ticks down by 1 for each adjacent unit by default (can be modified w/ keywords)
+
+Invisibility 
+- Invisible units are hidden and cannot be detected by 
       
       
