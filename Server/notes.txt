@@ -83,6 +83,10 @@ Spawning
  - Units spawn with no attacks and moves left
  - *Playtesting required to finalize above rules
 
+Win Condition
+ - When a player's headquarters is destroyed, they lose the ability to play cards and command their units and buildings
+ - When a team loses all of their headquarters, they lose and the other team wins
+
  Note: It is difficult to send functions over sockets. Do not have a loop with objects that reference each other.
  In order to facilitate that, we are removing circular and duplicate references within Players and GameStates.
  When storing or sending a game, we ignore the Game class and instead just serialize the GameState class.

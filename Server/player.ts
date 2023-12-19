@@ -11,6 +11,7 @@ export class PlayerInfo {
     public money = 0;
     public energy = 0; // Current energy available
     public totalEnergy = 0; // Total energy
+    public active = true; // Becomes false if they lose their HQ or disconnect
     constructor(self: Coordinate) {
         this.self = self;
     }

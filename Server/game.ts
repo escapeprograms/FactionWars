@@ -134,7 +134,7 @@ class GameState {
         this.players[this.turn].forEach(p => concatEvents(ret, p.playerInfo!.draw()));
 
         // Reset the team's turnEnd status
-        this.turnEnd[this.turn] = this.turnEnd[this.turn].map(_=>false);
+        this.turnEnd[this.turn] = this.players[this.turn].map(p=>!p.playerInfo!.active);
 
         /*// Start timer
         this.timerID = setTimeout(()=> this.endTurn(), TURN_LENGTH);*/
@@ -236,17 +236,16 @@ class GameState {
     move(player: Coordinate, unit: Coordinate, steps: Coordinate[]): PlayerArr<SocketEvent[]> {
         const p = this.getPlayer(player);
         const u = this.getUnit(unit);
-        if (!p || p.team !== this.turn) return emptyPArr(); // Not a player or not their turn
+        if (!p || p.team !== this.turn || !p.playerInfo!.active) return emptyPArr(); // Not a player or not their turn
         if (!u || !compArr(u.owner, player)) return emptyPArr(); // Not a valid unit or not their unit
         if (steps.some(s => !s.every(x => isInt(x, 0, this.fieldSize - 1)))) return emptyPArr(); // Invalid coordinate
         return u.move(this, steps);
     }
 
     attack(player: Coordinate, source: Coordinate, target: Coordinate): Events {
-        // TODO
         const p = this.getPlayer(player);
         const o = this.getOccupant(source);
-        if (!p || p.team !== this.turn) return emptyPArr();
+        if (!p || p.team !== this.turn || !p.playerInfo!.active) return emptyPArr();
         if (!o || !compArr(o.owner, player)) return emptyPArr();
         if (compArr(source, target) || !target.every(x => isInt(x, 0, this.fieldSize - 1))) return emptyPArr(); // Invalid target coordinate
         return o.attack(this, target);

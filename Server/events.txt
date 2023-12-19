@@ -43,3 +43,4 @@ building-spawn (gives player Coordinate and building Coordinate, tells client sp
 took-damage (gives Coordinate and damage amount, tells client thing at that Coordinate took damage)
 death (gives Coordinate, tells client thing at that Coordinate died)
 attack (gives source and target Coordinate, tells client source attacked target)
+game-end (gives winning team, tells client game has ended)

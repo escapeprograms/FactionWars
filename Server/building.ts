@@ -6,6 +6,7 @@ import { withinRadius } from "../Client/functions.js";
 export { Building, BuildingStats};
 
 type BuildingStats  = {
+    name: string,
     maxHealth: number;
     damage: number; // Attack damage, 0 for doesn't attack?
     splash: number; // splash radius, 0 for no splash/doesn't attack
@@ -153,13 +154,14 @@ class Building {
     }
     die(game: GameState): Events {
         const ret = emptyPArr<SocketEvent>();
+        const owner = game.getPlayer(this.owner);
         // Eventually, implement on death effects (if any)
         // Remove from building list
         let i = game.buildings.findIndex(u => u.loc === this.loc);
         if (i === -1) {throw new Error("Building tried to die but was not found in game's building array");}
         game.buildings.splice(i, 1);
         // Remove from player's owned units
-        let b = game.getPlayer(this.owner).playerInfo!.buildings;
+        let b = owner.playerInfo!.buildings;
         i = b.findIndex(c => c === this.loc);
         if (i === -1) {throw new Error("Building tried to die but was not found in player's building array");}
         b.splice(i, 1);
@@ -167,9 +169,19 @@ class Building {
         doubleIt((i, j) => game.field[i][j].leave(), this.loc[0], this.loc[1], this.loc[0] + this.stats.size, this.loc[1] + this.stats.size);
         // Deactivate as this is no longer producing energy
         concatEvents(ret, this.deactivate(game));
-        concatEvents(ret, game.getPlayer(this.owner).playerInfo!.upkeep(game));
+        concatEvents(ret, owner.playerInfo!.upkeep(game));
         // Return events
         doubleIt((i, j) => ret[i][j].push({event: "death", params: [[...this.loc]]}), 0, 2, 0, 2);
+        // Possible Headquarters destruction
+        if (this.stats.name === "Headquarters") {
+            owner.playerInfo!.active = false;
+            // Possible game end
+            if (!game.getPlayer([owner.team, 1 - owner.playerInfo!.self[1]]).playerInfo!.active) {
+                doubleIt((i, j) => ret[i][j].push({event: "game-end", params: [1 - owner.team]}), 0, 2, 0, 2);
+            }
+        }
+        
+        //doubleIt((i, j) => ret[i][j].push({event: "game-end", params: [1-game.getPlayer(this.owner).team]}), 0, 2, 0, 2);
         return ret;
         // There should be no more references to this unit so it can be garbage collected?
     }
