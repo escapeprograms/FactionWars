@@ -3,7 +3,8 @@ create-game (from the menu, send name)
 join-game (from the menu, send name and lobby id)
 change-team (inside the lobby)
 change-faction (inside the lobby, send faction)
-start game
+start-game (inside the lobby, host only)
+end-turn (ends your turn, meaning that if your teammate ends the turn automatically ends)
 play card (subcases: operation, building a building, deploying a unit)
 move unit
 attack w/ unit

@@ -32,7 +32,7 @@ class Building {
         this.owner = player;
         this.health = stats.maxHealth;
         this.buildLeft = stats.buildTime;
-        // this.activate(game.getPlayer(player).playerInfo!); // TODO: Manual activation needed
+        // Note: Manual activation needed
     }
     // Takes in the GameState
     endTurn(game: GameState): Events {

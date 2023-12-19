@@ -96,7 +96,7 @@ class GameState {
     }
 
     // Verifies if a building can be placed at the specified location
-    verifyPlacement(size: number, x: number, y: number):boolean {
+    verifyPlacement(size: number, x: number, y: number): boolean {
         // Assumes square field
         if (!isInt(x, 0, this.fieldSize - size) || !isInt(y, 0, this.fieldSize - size)) return false;
         

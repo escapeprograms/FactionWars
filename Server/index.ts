@@ -218,6 +218,14 @@ io.on("connection", (socket: Socket) => {
             }
         }
     });
+    socket.on("end-turn", () => {
+        console.log(socket.id + " is trying to end their turn.");//
+        const sock = socketTable[socket.id];
+        if (checkState(sock, SocketState.Game)) {
+            const game = sock.info!.lobby.gameInfo!;
+            if (game.end(sock.info!.player.playerInfo!.self)) endTurn(game);
+        }
+    });
     socket.on("move-unit", (unit, steps) => {
         const sock = socketTable[socket.id];
         if (checkState(sock, SocketState.Game)) {
