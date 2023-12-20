@@ -211,7 +211,7 @@ io.on("connection", (socket: Socket) => {
                     socketTable[p.id].state = SocketState.Game; // socketTable[p.id] should never be undefined
                 }); 
                 lobby.gameInfo = new GameState(lobby.players); // Possibly add arguments later
-                lobby.started = true;
+                lobby.active = true;
                 // Send specialized GameState to each player
                 lobby.players.forEach(p=>sockets.get(p.id)?.emit("game-start", lobby.gameInfo!.clientCopy(p.playerInfo!.self)));
                 console.log(socket.id + " has started game: " + lobby.id);//

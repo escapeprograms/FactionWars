@@ -44,8 +44,8 @@ export type Player = {
 export type Lobby = {
     players: Player[],
     id: string,
-    started: boolean // Same as gameInfo === undefined
-    gameInfo: undefined | GameState // Undefined while it is a lobby
+    active: boolean // Whether or not the game is active
+    gameInfo: undefined | GameState // Guaranteed to be defined when active
 };
 
 export type Result<T, U> = {

@@ -19,7 +19,7 @@ export function createLobby(player: Player): Lobby {
     const lobby: Lobby = {
         players: [player],
         id: lobbyId,
-        started: false,
+        active: false,
         gameInfo: undefined
     };
     lobbyTable[lobbyId] = lobby;
@@ -41,7 +41,7 @@ export function joinLobby(player: Player, id: string): Result<Lobby, LobbyJoinEr
     if (!/^[A-Z]{4}$/.test(id)) { return failure(LobbyJoinError.InvalidId); } // Checks that id is exactly 4 uppercase letters
     const lobby = lobbyTable[id];
     if (lobby === undefined) { return failure(LobbyJoinError.LobbyDoesntExist); }
-    if (lobby.started) { return failure(LobbyJoinError.GameStarted); }
+    if (lobby.active) { return failure(LobbyJoinError.GameStarted); }
     if (lobby.players.length >= 4) { return failure(LobbyJoinError.LobbyFull); }
     // id is valid, join the game
     lobby.players.push(player);
@@ -59,7 +59,7 @@ export function filterLobby(lobby: Lobby): Lobby {
             playerInfo: player.playerInfo
         }}),
         id: lobby.id,
-        started: lobby.started,
+        active: lobby.active,
         gameInfo: lobby.gameInfo // DOES NOT FILTER GAMESTATE!
     };
 }
