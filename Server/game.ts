@@ -8,7 +8,7 @@ import b from "./../Client/buildings.json" assert { type: "json" };
 import u from "./../Client/units.json" assert {type: "json"}; // See if this works or needs parsing
 import c from "./../Client/cards.json" assert {type: "json"};
 
-export { GameState, buildings, units, cards }; // Tile, Field
+export { GameState, Tile, buildings, units, cards }; // Tile, Field
 
 const buildings = b as {[key: string]: BuildingStats}; // To establish type
 const units = u as {[key: string]: UnitStats};
@@ -177,6 +177,7 @@ class GameState {
     clientCopy(player?: Coordinate): ClientGameState {
         return {
             turn: this.turn,
+            field: this.field,
             fieldSize: this.fieldSize,
             players: this.players.map(team=>team.map(p=>({
                 id: socketTable[p.id].clientId,

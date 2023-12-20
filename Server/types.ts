@@ -1,4 +1,4 @@
-import { GameState } from "./game.js";
+import { GameState, Tile } from "./game.js";
 import { Card } from "./card.js";
 import { Unit } from "./unit.js";
 import { Building } from "./building.js";
@@ -84,7 +84,7 @@ export type Events = PlayerArr<SocketEvent[]>;
 
 export type ClientGameState = {
     turn: number,
-    // field (are we sending the field over?)
+    field: Tile[][],
     fieldSize: number,
     players: {
         id: string, // this should be the clientID
