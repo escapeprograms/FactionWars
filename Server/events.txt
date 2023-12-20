@@ -1,16 +1,16 @@
 Server Side Events:
+disconnect (automatic event: client has disconnected)
 create-game (from the menu, send name)
 join-game (from the menu, send name and lobby id)
 change-team (inside the lobby)
 change-faction (inside the lobby, send faction)
 start-game (inside the lobby, host only)
 end-turn (ends your turn, meaning that if your teammate ends the turn automatically ends)
+move-unit (in game, send unit Coordinate and steps array)
+attack (in game, send source and target Coordinates)
+
 play card (subcases: operation, building a building, deploying a unit)
-move unit
-attack w/ unit
 activate unit
-end turn
-disconnect
 chat msg (later)
 
 Client Side Events:
