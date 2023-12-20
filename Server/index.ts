@@ -121,10 +121,7 @@ io.on("connection", (socket: Socket) => {
             // Not emitting new-join because there shouldn't be anyone else in the lobby
             console.log(socket.id + " has created a new game with id: " + lobby.id);//
         }
-        else {
-            // This should not happen from a regular client, as the client should have filtered already
-            socket.emit("create-error", "invalid-name");
-        }
+        // There should not have to be an else branch, as the client should have filtered already
     });
     socket.on("join-game", (name, lobbyId) => {
         console.log(socket.id + " is trying to join a lobby.");//
@@ -144,8 +141,15 @@ io.on("connection", (socket: Socket) => {
                 socketTable[socket.id].state = SocketState.Lobby;
                 socketTable[socket.id].info = {player: player, lobby: lobby};
                 socket.join(lobby.id);
+
+                // Set to unused faction and not full team by default
+                player.team = lobby.players.reduce((acc: number, e) => acc + e.team, 0) >= 2 ? 0 : 1;
+                const factions = ["T", "M", "S", "A"];
+                while (factions.length > 1 && lobby.players.some(p => p.faction === factions[0])) {factions.shift();}
+                player.faction = factions[0] as Faction;
+
                 socket.emit("lobby-join-result", true, filterLobby(lobby))
-                socket.to(lobbyId).emit("new-join", {name:name, clientId:socketTable[socket.id].clientId});
+                socket.to(lobbyId).emit("new-join", {name: name, clientId: socketTable[socket.id].clientId, faction: player.faction, team: player.team});
                 console.log(socket.id + " has successfully joined lobby " + lobby.id + " as " + name);//
             } else {
                 socket.emit("lobby-join-result", false, result.value);

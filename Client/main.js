@@ -227,6 +227,9 @@ function switchToLobby(name, lobby, host = false) {
         button(130, 10, 50, 50, "S", () => changeMyFaction("S")),
         button(190, 10, 50, 50, "A", () => changeMyFaction("A")),
         button(10, 70, 230, 50, "Change Teams", changeMyTeam),
+        //
+        button(250, 10, 120, 50, "Start Game", ()=>socket.emit("start-game")),//
+        //
         new Text(625, 75, lobby.id, 100),
         teamBox(10, "red", redList),
         teamBox(405, "blue", blueList),
@@ -262,11 +265,15 @@ function joinLobby(name, code) {
     }
 }
 
-socket.on("new-join", ({clientId, name}) => {
-    players.push(new Player(clientId, name));
+socket.on("new-join", ({clientId, name, faction, team}) => {
+    players.push(new Player(clientId, name, faction, team));
     updateUI();
 });
-
+//
+socket.on("game-start", (data)=> {
+    console.log("Recieved 'game-start'!");
+    console.log(data);
+})
 socket.on("player-left-lobby", id => {
     const index = players.findIndex(player => player.id === id);
     // Just in case
