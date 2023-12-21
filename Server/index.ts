@@ -72,7 +72,7 @@ io.on("connection", (socket: Socket) => {
     }
     // This event is for testing only
     socket.on("test", (data)=> {
-        const mkPlayer = () => ({id: 'a', name: 'a', faction: "T" as Faction, team: 0, playerInfo: undefined});
+        const mkPlayer = () => ({id: 'a', name: 'a', faction: "T" as Faction, team: 0, playerInfo: undefined, connected: true});
         const a = new GameState([mkPlayer(), mkPlayer(), mkPlayer(), mkPlayer()]);
         console.log(a);
     });
@@ -111,7 +111,8 @@ io.on("connection", (socket: Socket) => {
                 name: name,
                 faction: "T" as Faction,
                 team: 0,
-                playerInfo: undefined
+                playerInfo: undefined,
+                connected: true
             };
             const lobby = createLobby(player);
             sock.state = SocketState.Lobby;
@@ -133,7 +134,8 @@ io.on("connection", (socket: Socket) => {
                 name: name,
                 faction: "T",
                 team: 0,
-                playerInfo: undefined
+                playerInfo: undefined,
+                connected: true
             }
             const result = joinLobby(player, lobbyId);
             if (result.isSuccessful) {

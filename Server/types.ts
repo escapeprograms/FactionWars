@@ -38,7 +38,8 @@ export type Player = {
     name: string
     faction: Faction,
     team: Team,
-    playerInfo: undefined | PlayerInfo // Undefined while in lobby
+    playerInfo: undefined | PlayerInfo, // Undefined while in lobby
+    connected: boolean // False if they have disconnected
 };
 
 export type Lobby = {
