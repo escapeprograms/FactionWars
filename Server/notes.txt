@@ -1,23 +1,35 @@
 Classes and types
 Lobby (type):
-- manages information about sockets, teams, factions pre-game
-Game:
-- manages information about sockets, teams, factions
+- manages information about players
+- has a unique id
+- possibly contains a GameState
+GameState:
+- manages pretty much everything about the game
+- keeps master arrays of buildings and units
 - tracks data about turns, Players, the battlefield of tiles
-- turn timer
+- is used by other classes to start/end turns as well as get information about other parts of the game
+- is called to manage movement, attacks, and ability activations
+- *does not manage turn timer! This should be managed by index.ts!
 Tile:
 - terrain type
-- covered by building (reference to building, undefined=false)
+- occupant reference (through Coordinate) and occupant type (building/unit)
 
 Player:
 - socket id
 - faction and team
+- name
+- connected status
+- PlayerInfo for other game-relevant information
+PlayerInfo:
 - energy and money
 - building ownership (array)
 - unit ownership (array)
-- card ownership
+- hand (array)
+- deck
+- Called to draw, discard, and play cards
+- Called for building upkeep (make sure buildings are not using more energy than available)
 Card
-- OperationCard, UnitCard, BuildingCard subclasses
+- Contains basic info of a card
 Unit
 - HP, SPD, ATK, RAN (as base stats too)
 - passive abilities
@@ -29,12 +41,20 @@ type UnitType = {
 }
 type Unit = {
     type: UnitType
+    move()
+    attack()
+    takeDamge()
+    die()
+    ...
 }
 Building
 - similar to unit
 
 Game Flow
-Start game / Join Game > Choose factions & teams > Game starts automatically
+[Menu] > Start game / Join Game > 
+[Lobby] > Choose factions & teams > Host starts game > 
+[Game] > Play game > Game ends > 
+[GameEnd] > Goto Menu / Goto Lobby / View GameState
 
 Game mechanics
  - Turn end: All of your buildings get -1 building cooldown
