@@ -212,7 +212,14 @@ io.on("connection", (socket: Socket) => {
                     p.playerInfo = new PlayerInfo([-1, -1]) // Coordinates will be changed when GameState is constructed
                     socketTable[p.id].state = SocketState.Game; // socketTable[p.id] should never be undefined
                 }); 
-                lobby.gameInfo = new GameState(lobby.players); // Possibly add arguments later
+                lobby.gameInfo = new GameState(lobby.players, 50);
+                lobby.gameInfo.onGameEnd = () => {
+                    clearTimeout(lobby.gameInfo!.timerID);
+                    lobby.active = false;
+                    // TODO: Handle disconnected players
+                    // Also make sure game cannot start until they are ready
+                    lobby.players.forEach(p => socketTable[p.id].state = SocketState.GameEnd);
+                }
                 lobby.active = true;
                 // Send specialized GameState to each player
                 lobby.players.forEach(p=>sockets.get(p.id)?.emit("game-start", lobby.gameInfo!.clientCopy(p.playerInfo!.self)));
@@ -229,6 +236,7 @@ io.on("connection", (socket: Socket) => {
         const sock = socketTable[socket.id];
         if (checkState(sock, SocketState.Game)) {
             const game = sock.info!.lobby.gameInfo!;
+            if (!game.active) return;
             if (game.end(sock.info!.player.playerInfo!.self)) endTurn(game);
         }
     });
@@ -240,6 +248,7 @@ io.on("connection", (socket: Socket) => {
             
             const info = sock.info!;
             const game = info.lobby.gameInfo!;
+            if (!game.active) return;
             const events = game.move(info.player.playerInfo!.self, unit, steps);
             
             // Broadcast events
@@ -252,6 +261,7 @@ io.on("connection", (socket: Socket) => {
             // Validate correct input types
             if (!isCoord(source) || !isCoord(target)) return;
             const game = sock.info!.lobby.gameInfo!;
+            if (!game.active) return;
             const events = game.attack(sock.info!.player.playerInfo!.self, source, target);
 
             sendEvents(events, game);

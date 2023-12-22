@@ -29,7 +29,7 @@ export type SocketInfo = {
     clientId: string
     info: undefined
 } | {
-    state: SocketState.Lobby | SocketState.Game,
+    state: SocketState.Lobby | SocketState.Game | SocketState.GameEnd,
     clientId: string,
     info: { player: Player, lobby: Lobby }
 }
