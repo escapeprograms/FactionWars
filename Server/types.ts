@@ -20,7 +20,8 @@ export enum Team {
 export enum SocketState {
     Menu = 0,
     Lobby = 1,
-    Game = 2
+    Game = 2,
+    GameOver = 3
 }
 
 export type SocketInfo = {
