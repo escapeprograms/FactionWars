@@ -7,7 +7,7 @@ import { socketTable, generateClientId } from "./users.js"
 import { isValidName } from "../Client/functions.js";
 import { TURN_LENGTH } from "../Client/constants.js";
 import { createLobby, joinLobby, filterLobby, lobbyTable, verifyLobby } from "./lobby.js";
-import { SocketState, Faction, Lobby, Player, SocketInfo, GameState, PlayerInfo, PlayerArr, SocketEvent } from "./types.js";
+import { SocketState, Faction, Lobby, Player, SocketInfo, GameState, PlayerInfo, PlayerArr, SocketEvent, PlayerStatus} from "./types.js";
 import { isCoord, doubleIt } from "./utility.js";
 
 const clientPath = path.resolve("Client")
@@ -72,7 +72,7 @@ io.on("connection", (socket: Socket) => {
     }
     // This event is for testing only
     socket.on("test", (data)=> {
-        const mkPlayer = () => ({id: 'a', name: 'a', faction: "T" as Faction, team: 0, playerInfo: undefined, connected: true});
+        const mkPlayer = () => ({id: 'a', name: 'a', faction: "T" as Faction, team: 0, playerInfo: undefined, status: PlayerStatus.Active});
         const a = new GameState([mkPlayer(), mkPlayer(), mkPlayer(), mkPlayer()]);
         console.log(a);
     });
@@ -81,23 +81,40 @@ io.on("connection", (socket: Socket) => {
         // For now, we don't care about the reason
         const sock = socketTable[socket.id];
         if (sock) {
-            // if (sock.state === SocketState.Menu) // Nothing to do here
-            if (sock.state === SocketState.Lobby) {
-                // Remove player from lobby
-                const {player, lobby} = sock.info!;
-                lobby.players = lobby.players.filter(x => x.id !== socket.id);
-                if (lobby.players.length === 0) {
-                    // Close lobby if lobby is empty
-                    delete lobbyTable[lobby.id];
-                } else {
-                    socket.to(lobby.id).emit("player-left-lobby", sock.clientId);
+            switch(sock.state) {
+                case SocketState.Menu:
+                    break; // Nothing to do here
+                case SocketState.GameEnd:
+                    // Remove player from lobby
+                case SocketState.Lobby: {
+                    // Remove player from lobby
+                    const {player, lobby} = sock.info!;
+                    lobby.players = lobby.players.filter(x => x.id !== socket.id);
+                    if (lobby.players.length === 0) {
+                        // Close lobby if lobby is empty
+                        delete lobbyTable[lobby.id];
+                    } else {
+                        socket.to(lobby.id).emit("player-left-lobby", sock.clientId);
+                    }
                 }
-            } else if (sock.state === SocketState.Game) {
-                // TODO
-                // const {player, game} = sock.info as {game: Game, player: Player};
-                // Do other stuff here as appropriate
-                // emit "player-left-game", sock.clientId
-            } // Else, well, something's weird
+                case SocketState.Game: {
+                    // TODO
+                    const {player, lobby} = sock.info;
+                    // Mark status as disconnected
+                    player.status = PlayerStatus.Disconnected;
+                    // End turn automatically
+                    if (lobby.gameInfo!.active) lobby.gameInfo!.end(player.playerInfo!.self);
+                    if (lobby.players.reduce((acc: number, e) => acc + e.status !== PlayerStatus.Disconnected ? 1 : 0, 0) > 0) {
+                        socket.to(lobby.id).emit("player-left-game", sock.clientId);
+                    } else {
+                        // Close lobby if lobby is empty
+                        delete lobbyTable[lobby.id];
+                    }
+                    // Note that the player object cannot be deleted as it is still required for the game to run
+                    // The player's HQ, units, buildings are still in the game; they just will not be commanded anymore
+                }
+                // default: Something's weird if it ever gets here
+            }
             delete socketTable[socket.id];
         } // Else, socket not in table, whatever
     });
@@ -112,7 +129,7 @@ io.on("connection", (socket: Socket) => {
                 faction: "T" as Faction,
                 team: 0,
                 playerInfo: undefined,
-                connected: true
+                status: PlayerStatus.Active
             };
             const lobby = createLobby(player);
             sock.state = SocketState.Lobby;
@@ -135,7 +152,7 @@ io.on("connection", (socket: Socket) => {
                 faction: "T",
                 team: 0,
                 playerInfo: undefined,
-                connected: true
+                status: PlayerStatus.Active
             }
             const result = joinLobby(player, lobbyId);
             if (result.isSuccessful) {
@@ -216,9 +233,25 @@ io.on("connection", (socket: Socket) => {
                 lobby.gameInfo.onGameEnd = () => {
                     clearTimeout(lobby.gameInfo!.timerID);
                     lobby.active = false;
-                    // TODO: Handle disconnected players
-                    // Also make sure game cannot start until they are ready
-                    lobby.players.forEach(p => socketTable[p.id].state = SocketState.GameEnd);
+                    // Remove disconnected players
+                    if (lobby.players.reduceRight((acc: number, p, i) => {
+                        if (p.status === PlayerStatus.Disconnected) {
+                            // Remove player from lobby
+                            lobby.players.splice(i, 1);
+                            // Remove player from SocketTable
+                            delete socketTable[p.id];
+                            acc++;
+                        }
+                        return acc;
+                    }, 0) === 0) {
+                        // All players have disconnected, can safely delete lobby
+                        delete lobbyTable[lobby.id];
+                    } else {
+                        lobby.players.forEach(p => {
+                            socketTable[p.id].state = SocketState.GameEnd;
+                            p.status = PlayerStatus.GameEnd;
+                        });
+                    }
                 }
                 lobby.active = true;
                 // Send specialized GameState to each player

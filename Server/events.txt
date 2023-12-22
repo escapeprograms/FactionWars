@@ -23,6 +23,7 @@ lobby-join-result (gives boolean indicating success and either filtered lobby or
 join-error (happens when name is invalid, should not happen from regular client use)
 new-join (gives name clientId, faction, and team, tells client that a new player joined their lobby)
 player-left-lobby (gives clientId, tells client that a player left their lobby)
+player-left-game (gives clientId, tells client that player left their in progress game)
 team-change-success (gives new team, tells client they have successfully changed teams)
 team-change (gives clientId and new team, tells client other client in lobby has changed teams)
 faction-change-error (gives error, tells client error in changing faction)

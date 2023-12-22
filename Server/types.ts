@@ -34,13 +34,19 @@ export type SocketInfo = {
     info: { player: Player, lobby: Lobby }
 }
 
+export enum PlayerStatus {
+    Active = 0,
+    Disconnected = 1,
+    GameEnd = 2
+}
+
 export type Player = {
     id: string, // Server side, this is socketId; client side, this is client id
     name: string
     faction: Faction,
     team: Team,
     playerInfo: undefined | PlayerInfo, // Undefined while in lobby
-    connected: boolean // False if they have disconnected
+    status: PlayerStatus // False if they have disconnected
 };
 
 export type Lobby = {

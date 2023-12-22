@@ -1,4 +1,4 @@
-import { CardType, Player, Team, Coordinate, ClientGameState, Faction, PlayerArr, emptyPArr, SocketEvent, Events, Lobby } from "./types.js";
+import { CardType, Player, Team, Coordinate, ClientGameState, Faction, PlayerArr, emptyPArr, SocketEvent, Events, PlayerStatus } from "./types.js";
 import { Building, BuildingStats, Unit, UnitStats, Card, Deck } from "./types.js";
 import { concatEvents, compArr, deepCopy, doubleIt, isCoord, isInt } from "./utility.js";
 import { socketTable } from "./users.js";
@@ -137,7 +137,7 @@ class GameState {
         this.players[this.turn].forEach(p => concatEvents(ret, p.playerInfo!.draw()));
 
         // Reset the team's turnEnd status
-        this.turnEnd[this.turn] = this.players[this.turn].map(p=>!(p.playerInfo!.active && p.connected));
+        this.turnEnd[this.turn] = this.players[this.turn].map(p=>!(p.playerInfo!.active && p.status === PlayerStatus.Active));
 
         /*// Start timer
         this.timerID = setTimeout(()=> this.endTurn(), TURN_LENGTH);*/
