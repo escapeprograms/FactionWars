@@ -56,7 +56,8 @@ export function filterLobby(lobby: Lobby): Lobby {
             name: player.name,
             faction: player.faction,
             team: player.team,
-            playerInfo: player.playerInfo
+            playerInfo: player.playerInfo,
+            connected: player.connected
         }}),
         id: lobby.id,
         active: lobby.active,
