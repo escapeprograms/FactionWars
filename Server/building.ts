@@ -175,9 +175,12 @@ class Building {
         // Possible Headquarters destruction
         if (this.stats.name === "Headquarters") {
             owner.playerInfo!.active = false;
+            doubleIt((i, j) => ret[i][j].push({event: "hq-death", params: [[...this.owner]]}), 0, 2, 0, 2);
             // Possible game end
             if (!game.getPlayer([owner.team, 1 - owner.playerInfo!.self[1]]).playerInfo!.active) {
                 doubleIt((i, j) => ret[i][j].push({event: "game-end", params: [1 - owner.team]}), 0, 2, 0, 2);
+                game.active = false;
+                game.onGameEnd();
             }
         }
         

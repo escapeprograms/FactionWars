@@ -23,14 +23,16 @@ class GameState {
     public units: Unit[] = []; // Contains the only references to in play units
     public turnEnd: PlayerArr<boolean> = [[false, false], [false, false]]; // Whether each player has ended their turn
     public timerID = setTimeout(()=>undefined, 1); // Id for setTimeout();
-    //private lobby: () => Lobby;
+    public onGameEnd: () => void; // To be called when the game ends
+    public active: boolean = true; // false if game has ended
 
-    constructor (players: Player[], fieldSize=50) {
+    constructor (players: Player[], fieldSize=50, onGameEnd=()=>{}) {
         players.forEach(p=>{
             p.playerInfo!.self = [p.team, this.players[p.team].length];
             this.players[p.team].push(p)
         });
         this.fieldSize = fieldSize;
+        this.onGameEnd = onGameEnd;
         this.setField(fieldSize); // Spawn HQs
         this.setup(); //  Give cards to each player
     }

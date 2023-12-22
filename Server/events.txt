@@ -42,5 +42,6 @@ card-discarded (gives player Coordinate and index, tells client specified player
 building-spawn (gives player Coordinate and building Coordinate, tells client specified has spawned a building)
 took-damage (gives Coordinate and damage amount, tells client thing at that Coordinate took damage)
 death (gives Coordinate, tells client thing at that Coordinate died)
+hq-death (gives player Coordinate, tells client Player's HQ was destroyed)
 attack (gives source and target Coordinate, tells client source attacked target)
 game-end (gives winning team, tells client game has ended)
