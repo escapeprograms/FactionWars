@@ -146,10 +146,10 @@ class GameState {
     }
 
     // Ends a player's turn and returns whether or not the entire turn can be ended
-    end(player: Coordinate): boolean {
+    changeEndStatus(player: Coordinate, status: boolean): boolean {
         if (player.every(x => isInt(x, 0, 1)) && this.getPlayer(player).team === this.turn) {
-            this.turnEnd[player[0]][player[1]] = true;
-            return this.turnEnd[player[0]][1-player[1]]
+            this.turnEnd[player[0]][player[1]] = status;
+            return status && this.turnEnd[player[0]][1-player[1]];
         }
         return false;
     }

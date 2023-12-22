@@ -103,9 +103,11 @@ io.on("connection", (socket: Socket) => {
                     // Mark status as disconnected
                     player.status = PlayerStatus.Disconnected;
                     // End turn automatically
-                    if (lobby.gameInfo!.active) lobby.gameInfo!.end(player.playerInfo!.self);
+                    let status = false;
+                    if (lobby.gameInfo!.active) status = lobby.gameInfo!.changeEndStatus(player.playerInfo!.self, true);
                     if (lobby.players.reduce((acc: number, e) => acc + e.status !== PlayerStatus.Disconnected ? 1 : 0, 0) > 0) {
                         socket.to(lobby.id).emit("player-left-game", sock.clientId);
+                        if (status) endTurn(lobby.gameInfo!); // Doing it before deleting socket from socketTable shouldn't break anything?
                     } else {
                         // Close lobby if lobby is empty
                         delete lobbyTable[lobby.id];
@@ -264,13 +266,17 @@ io.on("connection", (socket: Socket) => {
             }
         }
     });
-    socket.on("end-turn", () => {
-        console.log(socket.id + " is trying to end their turn.");//
+    socket.on("change-end-status", (status) => {
+        if (typeof(status) !== "boolean") return;
+        console.log(socket.id + " is setting their turn end status to " + status);//
         const sock = socketTable[socket.id];
         if (checkState(sock, SocketState.Game)) {
-            const game = sock.info!.lobby.gameInfo!;
+            const lobby = sock.info!.lobby;
+            const game = lobby.gameInfo!;
+            const self = sock.info!.player.playerInfo!.self;
             if (!game.active) return;
-            if (game.end(sock.info!.player.playerInfo!.self)) endTurn(game);
+            socket.to(lobby.id).emit("turn-status-change", self, status);
+            if (game.changeEndStatus(self, status)) endTurn(game);
         }
     });
     socket.on("move-unit", (unit, steps) => {
