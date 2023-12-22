@@ -54,6 +54,10 @@ class GameState {
         if (size < stats.size * 2 ) {throw new Error("field too small");}
         const obj = this;
         doubleIt((i, j) => obj.spawnBuilding(stats, i * (size - stats.size), j * (size - stats.size), [i, j]), 0, 0, 2, 2);
+        // Spawn 1 footsoldier per player
+        // TODO: Later, decide on location and spacing
+        const uStats = units["footsoldier"];
+        doubleIt((i, j) => obj.spawnUnit(uStats, stats.size + i * (size - 2 * stats.size - 1), stats.size + j * (size - 2 * stats.size - 1), [i, j]), 0, 0, 2, 2);
     }
     setup() {
         // Initialize deck and hands
