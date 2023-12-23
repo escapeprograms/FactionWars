@@ -23,7 +23,7 @@ export class PlayerInfo {
             ret[i][j].push({event: "card-drawn", params: (i === this.self[0] && j === this.self[1] ? [[...this.self], card] : [[...this.self]])}), 
         0, 0, 2, 2);
         this.cards.push(card); // Add card to hand
-        if (this.cards.length >= MAX_HAND_SIZE) {
+        if (this.cards.length > MAX_HAND_SIZE) {
             concatEvents(ret, this.discard(this.cards.length - 1)); // Immediately discard; hand is full
             console.log("Hand is full, drawn card immediately discarded");
         }
@@ -51,14 +51,15 @@ export class PlayerInfo {
     }
     // Plays the card at the specified index
     // Returns true on success
-    play(game: GameState, index: number, targets: {[key: string]: any}) {
+    play(game: GameState, index: number, targets: {[key: string]: any}): boolean {
         const self = game.get(this.self, "player") as Player; //game.getPlayer(this.self);
         let card: Card;
         // can only play on your turn and can only play cards that exist
         if (game.turn !== self.team || !isInt(index, 0, this.cards.length - 1)) return false;
         card = this.cards[index];
-        // Check validity of targets
-        if (this.validTargets(game, card, targets)) {
+        // Check validity of targets && cost requirement
+        if (card.cost <= this.money && this.validTargets(game, card, targets)) {
+            this.money -= card.cost;
             card.effects.forEach(e => {
                 switch(e.effect) {
                     case "spawn":
@@ -87,6 +88,7 @@ export class PlayerInfo {
                         throw new Error(`Effect type ${e.effect} not supported`);
                 }
             });
+            return true;
         } else {
             // Targets invalid, cannot play
             return false;
