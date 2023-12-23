@@ -20,6 +20,13 @@ const server = http.createServer(app);
 const io = new Server(server);
 const sockets = io.sockets.sockets; // Maps socketids to sockets
 
+function closeLobby(lobby: Lobby): void;
+function closeLobby(lobby: ActiveLobby): void;
+function closeLobby(lobby: Lobby | ActiveLobby) {
+    delete lobbyTable[lobby.id];
+    if ("gameInfo" in lobby) clearTimeout(lobby.gameInfo.timerID);
+}
+
 io.on("connection", (socket: Socket) => {
     function checkState(sock: SocketInfo, state: SocketState): boolean {
         if (!sock) return false;
@@ -111,7 +118,7 @@ io.on("connection", (socket: Socket) => {
                         if (status) endTurn(lobby.gameInfo!); // Doing it before deleting socket from socketTable shouldn't break anything?
                     } else {
                         // Close lobby if lobby is empty
-                        delete lobbyTable[lobby.id];
+                        closeLobby(lobby);
                     }
                     // Note that the player object cannot be deleted as it is still required for the game to run
                     // The player's HQ, units, buildings are still in the game; they just will not be commanded anymore
@@ -248,7 +255,7 @@ io.on("connection", (socket: Socket) => {
                         return acc;
                     }, 0) === 0) {
                         // All players have disconnected, can safely delete lobby
-                        delete lobbyTable[lobby.id];
+                        closeLobby(lobby);
                     }
                 }
                 // Send specialized GameState to each player
