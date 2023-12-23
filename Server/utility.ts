@@ -47,7 +47,7 @@ export function isCoord(c: any) {
 
 // Given a number, returns whether or not that number is an integer
 // If given min and max, also checks if the number is within that range (inclusive)
-export function isInt(num: number, min?: number, max?: number): boolean {
+export function isIntInRange(num: number, min?: number, max?: number): boolean {
     if (num % 1 !== 0) return false;
     return (min === undefined || max === undefined) || (num >= min && num <= max);
 }

@@ -1,5 +1,5 @@
 import { Coordinate, PlayerId, Events, SocketEvent, Player, Card, Deck, GameState, units, buildings, emptyPArr } from "./types.js";
-import { arrEqual, concatEvents, doubleIt, isInt } from "./utility.js";
+import { arrEqual, concatEvents, doubleIt, isIntInRange } from "./utility.js";
 import { MAX_HAND_SIZE } from "../Client/constants.js";
 
 export class PlayerInfo {
@@ -31,7 +31,7 @@ export class PlayerInfo {
     }
     discard(index: number): Events {
         const ret = emptyPArr<SocketEvent>();
-        if (!isInt(index, 0, this.cards.length - 1)) return ret; // Invalid discard
+        if (!isIntInRange(index, 0, this.cards.length - 1)) return ret; // Invalid discard
         this.deck.add(this.cards.splice(index, 1)[0]);
         doubleIt((i, j) => ret[i][j].push({event: "card-discarded", params: [...this.self, index]}), 0, 0, 2, 2);
         return ret;
@@ -55,7 +55,7 @@ export class PlayerInfo {
         const self = game.get(this.self, "player") as Player; //game.getPlayer(this.self);
         let card: Card;
         // can only play on your turn and can only play cards that exist
-        if (game.turn !== self.team || !isInt(index, 0, this.cards.length - 1)) return false;
+        if (game.turn !== self.team || !isIntInRange(index, 0, this.cards.length - 1)) return false;
         card = this.cards[index];
         // Check validity of targets && cost requirement
         if (card.cost <= this.money && this.validTargets(game, card, targets)) {
@@ -98,7 +98,7 @@ export class PlayerInfo {
     // Checks validity of card targets
     validTargets(game: GameState, card: Card, targets: {[key: string]: any}): boolean {
         if (Object.keys(targets).length !== card.targets.length) return false;
-        const isCoord = (c: any, min?: number, max?: number) => Array.isArray(c) && c.length === 2 && c.every(x => isInt(x, min, max));
+        const isCoord = (c: any, min?: number, max?: number) => Array.isArray(c) && c.length === 2 && c.every(x => isIntInRange(x, min, max));
         card.targets.forEach((t, i) => {
             const tar = targets[t.name];
             if (!tar) return false;

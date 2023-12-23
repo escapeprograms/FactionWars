@@ -1,6 +1,6 @@
 import { CardType, Team, Coordinate, PlayerId, ClientGameState, Faction, PlayerArr, emptyPArr, SocketEvent, Events, PlayerStatus, PlayerInGame } from "./types.js";
 import { Building, BuildingStats, Unit, UnitStats, Card, Deck } from "./types.js";
-import { concatEvents, arrEqual, deepCopy, doubleIt, isCoord, isInt } from "./utility.js";
+import { concatEvents, arrEqual, deepCopy, doubleIt, isCoord, isIntInRange } from "./utility.js";
 import { socketTable } from "./users.js";
 import { PlayerInfo } from "./player.js";
 import { TURN_LENGTH } from "../Client/constants.js";
@@ -105,7 +105,7 @@ class GameState {
     // Verifies if a building can be placed at the specified location
     verifyPlacement(size: number, x: number, y: number): boolean {
         // Assumes square field
-        if (!isInt(x, 0, this.fieldSize - size) || !isInt(y, 0, this.fieldSize - size)) return false;
+        if (!isIntInRange(x, 0, this.fieldSize - size) || !isIntInRange(y, 0, this.fieldSize - size)) return false;
         
         let valid = true;
         const obj = this;
@@ -151,7 +151,7 @@ class GameState {
 
     // Ends a player's turn and returns whether or not the entire turn can be ended
     changeEndStatus(player: PlayerId, status: boolean): boolean {
-        if (player.every(x => isInt(x, 0, 1)) && this.getPlayer(player).team === this.turn) {
+        if (player.every(x => isIntInRange(x, 0, 1)) && this.getPlayer(player).team === this.turn) {
             this.turnEnd[player[0]][player[1]] = status;
             return status && this.turnEnd[player[0]][1-player[1]];
         }
@@ -246,7 +246,7 @@ class GameState {
         const u = this.getUnit(unit);
         if (!p || p.team !== this.turn || !p.playerInfo.active) return emptyPArr(); // Not a player or not their turn
         if (!u || !arrEqual(u.owner, player)) return emptyPArr(); // Not a valid unit or not their unit
-        if (steps.some(s => !s.every(x => isInt(x, 0, this.fieldSize - 1)))) return emptyPArr(); // Invalid coordinate
+        if (steps.some(s => !s.every(x => isIntInRange(x, 0, this.fieldSize - 1)))) return emptyPArr(); // Invalid coordinate
         return u.move(this, steps);
     }
 
@@ -255,7 +255,7 @@ class GameState {
         const o = this.getOccupant(source);
         if (!p || p.team !== this.turn || !p.playerInfo.active) return emptyPArr();
         if (!o || !arrEqual(o.owner, player)) return emptyPArr();
-        if (arrEqual(source, target) || !target.every(x => isInt(x, 0, this.fieldSize - 1))) return emptyPArr(); // Invalid target coordinate
+        if (arrEqual(source, target) || !target.every(x => isIntInRange(x, 0, this.fieldSize - 1))) return emptyPArr(); // Invalid target coordinate
         return o.attack(this, target);
     }
 }
