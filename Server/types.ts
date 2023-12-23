@@ -46,7 +46,7 @@ export type Player = {
     faction: Faction,
     team: Team,
     playerInfo?: PlayerInfo, // Undefined while in lobby
-    status: PlayerStatus // False if they have disconnected
+    status: PlayerStatus
 };
 
 export type Lobby = {

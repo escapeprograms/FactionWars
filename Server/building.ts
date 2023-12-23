@@ -1,5 +1,5 @@
 import { Coordinate, Player, Unit, GameState, emptyPArr, PlayerArr, SocketEvent, Events } from "./types.js";
-import { compArr, concatEvents, dist, doubleIt } from "./utility.js";
+import { arrEqual, concatEvents, dist, doubleIt } from "./utility.js";
 import { PlayerInfo } from "./player.js";
 import { withinRadius } from "../Client/functions.js";
 
@@ -47,26 +47,26 @@ class Building {
             if ((y = this.loc[1]-1) >= 0) {
                 for (x = this.loc[0]; x < this.loc[0]+this.stats.size; x++) {
                     let unit = game.getUnit([x, y]);
-                    if (unit && compArr(unit.owner, this.owner)) build += 2; // Refine later when we have special keywords/abilities for building
+                    if (unit && arrEqual(unit.owner, this.owner)) build += 2; // Refine later when we have special keywords/abilities for building
                 }
             }
             if ((y = this.loc[1]+this.stats.size) < game.fieldSize) {
                 for (x = this.loc[0]; x < this.loc[0]+this.stats.size; x++) {
                     let unit = game.getUnit([x, y]);
-                    if (unit && compArr(unit.owner, this.owner)) build += 2; // Refine later when we have special keywords/abilities for building
+                    if (unit && arrEqual(unit.owner, this.owner)) build += 2; // Refine later when we have special keywords/abilities for building
                 }
             }
             // Iterate left and right
             if ((x = this.loc[0]-1) >= 0) {
                 for (y = this.loc[1]; y < this.loc[1]+this.stats.size; y++) {
                     let unit = game.getUnit([x, y]);
-                    if (unit && compArr(unit.owner, this.owner)) build += 2; // Refine later when we have special keywords/abilities for building
+                    if (unit && arrEqual(unit.owner, this.owner)) build += 2; // Refine later when we have special keywords/abilities for building
                 }
             }
             if ((x = this.loc[0]+this.stats.size) < game.fieldSize) {
                 for (y = this.loc[1]; y < this.loc[1]+this.stats.size; y++) {
                     let unit = game.getUnit([x, y]);
-                    if (unit && compArr(unit.owner, this.owner)) build += 2; // Refine later when we have special keywords/abilities for building
+                    if (unit && arrEqual(unit.owner, this.owner)) build += 2; // Refine later when we have special keywords/abilities for building
                 }
             }
             

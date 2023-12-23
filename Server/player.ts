@@ -1,5 +1,5 @@
 import { Coordinate, Events, SocketEvent, Player, Card, Deck, GameState, units, buildings, emptyPArr } from "./types.js";
-import { compArr, concatEvents, doubleIt, isInt } from "./utility.js";
+import { arrEqual, concatEvents, doubleIt, isInt } from "./utility.js";
 import { MAX_HAND_SIZE } from "../Client/constants.js";
 
 export class PlayerInfo {
@@ -43,7 +43,7 @@ export class PlayerInfo {
         const buildings = game.buildings;
         let i = buildings.length;
         while (this.energy < 0) {
-            if (compArr(this.self, buildings[--i].owner) && buildings[i].stats.upkeep > 0) {
+            if (arrEqual(this.self, buildings[--i].owner) && buildings[i].stats.upkeep > 0) {
                 concatEvents(ret, buildings[i].deactivate(game));
             }
         }

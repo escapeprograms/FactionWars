@@ -1,7 +1,7 @@
 // Merge functions.js once it becomes functions.ts
 import { Coordinate, Events } from "./types.js";
 
-export function compArr<T>(c1: T[], c2: T[]) {
+export function arrEqual<T>(c1: T[], c2: T[]) {
     return c1.length === c2.length && c1.every((e, i)=>e === c2[i]);
 }
 

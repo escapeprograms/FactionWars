@@ -1,6 +1,6 @@
 import { CardType, Player, Team, Coordinate, ClientGameState, Faction, PlayerArr, emptyPArr, SocketEvent, Events, PlayerStatus } from "./types.js";
 import { Building, BuildingStats, Unit, UnitStats, Card, Deck } from "./types.js";
-import { concatEvents, compArr, deepCopy, doubleIt, isCoord, isInt } from "./utility.js";
+import { concatEvents, arrEqual, deepCopy, doubleIt, isCoord, isInt } from "./utility.js";
 import { socketTable } from "./users.js";
 import { PlayerInfo } from "./player.js";
 import { TURN_LENGTH } from "../Client/constants.js";
@@ -166,14 +166,14 @@ class GameState {
         return this.field[c[0]][c[1]];
     }
     getBuilding(c: Coordinate) {
-        return this.buildings.find(b => compArr(b.loc, c));
+        return this.buildings.find(b => arrEqual(b.loc, c));
     }
     getUnit(c: Coordinate) {
-        return this.units.find(u => compArr(u.loc, c));
+        return this.units.find(u => arrEqual(u.loc, c));
     }
     // Versatile but painful to use due to typing
     get(c: Coordinate, type: "unit" | "building" | "tile" | "player" | null) {
-        if (type === "unit" || type === "building") return this[type + "s" as "units" | "buildings"].find(x => compArr(x.loc, c));
+        if (type === "unit" || type === "building") return this[type + "s" as "units" | "buildings"].find(x => arrEqual(x.loc, c));
         else if (type === "tile" || type === "player") return this[type === "tile" ? "field" : "players"][c[0]][c[1]];
         else return null;
     }
@@ -245,7 +245,7 @@ class GameState {
         const p = this.getPlayer(player);
         const u = this.getUnit(unit);
         if (!p || p.team !== this.turn || !p.playerInfo!.active) return emptyPArr(); // Not a player or not their turn
-        if (!u || !compArr(u.owner, player)) return emptyPArr(); // Not a valid unit or not their unit
+        if (!u || !arrEqual(u.owner, player)) return emptyPArr(); // Not a valid unit or not their unit
         if (steps.some(s => !s.every(x => isInt(x, 0, this.fieldSize - 1)))) return emptyPArr(); // Invalid coordinate
         return u.move(this, steps);
     }
@@ -254,8 +254,8 @@ class GameState {
         const p = this.getPlayer(player);
         const o = this.getOccupant(source);
         if (!p || p.team !== this.turn || !p.playerInfo!.active) return emptyPArr();
-        if (!o || !compArr(o.owner, player)) return emptyPArr();
-        if (compArr(source, target) || !target.every(x => isInt(x, 0, this.fieldSize - 1))) return emptyPArr(); // Invalid target coordinate
+        if (!o || !arrEqual(o.owner, player)) return emptyPArr();
+        if (arrEqual(source, target) || !target.every(x => isInt(x, 0, this.fieldSize - 1))) return emptyPArr(); // Invalid target coordinate
         return o.attack(this, target);
     }
 }

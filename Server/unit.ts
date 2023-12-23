@@ -1,5 +1,5 @@
 import { Coordinate, PlayerArr, emptyPArr, SocketEvent, Events, Building, GameState } from "./types.js";
-import { compArr, concatEvents, dist, doubleIt } from "./utility.js";
+import { arrEqual, concatEvents, dist, doubleIt } from "./utility.js";
 import { withinRadius } from "../Client/functions.js";
 
 export {Unit, UnitStats};
@@ -60,7 +60,7 @@ class Unit {
                 // Add in invisible unit detection things here
                 // Adjust name in references to this unit (owner.unit, for instance)
                 const u = game.getPlayer(this.owner).playerInfo!.units
-                const i = u.findIndex(c => compArr(c, this.loc));
+                const i = u.findIndex(c => arrEqual(c, this.loc));
                 if (i < 0) throw new Error("Unit not found in owner's unit array");
                 u[i] = [...this.loc]; // To avoid weird things happening
             } else {
