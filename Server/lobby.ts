@@ -1,4 +1,4 @@
-import { Lobby, Player, Result, failure, success } from "./types.js";
+import { ActiveLobby, Lobby, Player, Result, failure, success } from "./types.js";
 import { socketTable } from "./users.js"
 
 export const lobbyTable: { [key: string]: Lobby } = {};
@@ -18,9 +18,7 @@ export function createLobby(player: Player): Lobby {
     const lobbyId = generateLobbyId();
     const lobby: Lobby = {
         players: [player],
-        id: lobbyId,
-        active: false,
-        gameInfo: undefined
+        id: lobbyId
     };
     lobbyTable[lobbyId] = lobby;
     return lobby;
@@ -41,7 +39,7 @@ export function joinLobby(player: Player, id: string): Result<Lobby, LobbyJoinEr
     if (!/^[A-Z]{4}$/.test(id)) { return failure(LobbyJoinError.InvalidId); } // Checks that id is exactly 4 uppercase letters
     const lobby = lobbyTable[id];
     if (lobby === undefined) { return failure(LobbyJoinError.LobbyDoesntExist); }
-    if (lobby.active) { return failure(LobbyJoinError.GameStarted); }
+    if ("gameInfo" in lobby) { return failure(LobbyJoinError.GameStarted); }
     if (lobby.players.length >= 4) { return failure(LobbyJoinError.LobbyFull); }
     // id is valid, join the game
     lobby.players.push(player);
@@ -49,8 +47,10 @@ export function joinLobby(player: Player, id: string): Result<Lobby, LobbyJoinEr
 }
 
 // Converts socketIds from users the given lobby into clientIds and returns a new lobby object
-export function filterLobby(lobby: Lobby): Lobby {
-    return {
+export function filterLobby(lobby: Lobby): Lobby;
+export function filterLobby(lobby: ActiveLobby): ActiveLobby;
+export function filterLobby(lobby: Lobby | ActiveLobby): Lobby | ActiveLobby {
+    return "gameInfo" in lobby ? {
         players: lobby.players.map(player => ({
             id: socketTable[player.id].clientId,
             name: player.name,
@@ -60,8 +60,16 @@ export function filterLobby(lobby: Lobby): Lobby {
             status: player.status
         })),
         id: lobby.id,
-        active: lobby.active,
         gameInfo: lobby.gameInfo // DOES NOT FILTER GAMESTATE!
+    } : {
+        players: lobby.players.map(player => ({
+            id: socketTable[player.id].clientId,
+            name: player.name,
+            faction: player.faction,
+            team: player.team,
+            status: player.status
+        })),
+        id: lobby.id,
     };
 }
 

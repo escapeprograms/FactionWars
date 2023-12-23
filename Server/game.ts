@@ -1,4 +1,4 @@
-import { CardType, Player, Team, Coordinate, PlayerId, ClientGameState, Faction, PlayerArr, emptyPArr, SocketEvent, Events, PlayerStatus } from "./types.js";
+import { CardType, Team, Coordinate, PlayerId, ClientGameState, Faction, PlayerArr, emptyPArr, SocketEvent, Events, PlayerStatus, PlayerInGame } from "./types.js";
 import { Building, BuildingStats, Unit, UnitStats, Card, Deck } from "./types.js";
 import { concatEvents, arrEqual, deepCopy, doubleIt, isCoord, isInt } from "./utility.js";
 import { socketTable } from "./users.js";
@@ -18,7 +18,7 @@ class GameState {
     public turn: Team = 0;
     public field: Tile[][] = []; // [0][0] is top left corner. [x] moves right, [y] moves down
     public fieldSize: number // For convenience, and assuming square fields
-    public players: PlayerArr<Player> = [[], []]; // [Team0Players, Team1Players]
+    public players: PlayerArr<PlayerInGame> = [[], []]; // [Team0Players, Team1Players]
     public buildings: Building[] = []; // Contains the only references to in play buildings
     public units: Unit[] = []; // Contains the only references to in play units
     public turnEnd: PlayerArr<boolean> = [[false, false], [false, false]]; // Whether each player has ended their turn
@@ -26,9 +26,9 @@ class GameState {
     public onGameEnd: () => void; // To be called when the game ends
     public active: boolean = true; // false if game has ended
 
-    constructor (players: Player[], fieldSize=50, onGameEnd=()=>{}) {
+    constructor (players: PlayerInGame[], fieldSize=50, onGameEnd=()=>{}) {
         players.forEach(p=>{
-            p.playerInfo!.self = [p.team, this.players[p.team].length];
+            p.playerInfo.self = [p.team, this.players[p.team].length];
             this.players[p.team].push(p)
         });
         this.fieldSize = fieldSize;
@@ -64,13 +64,13 @@ class GameState {
         this.players.forEach(t => t.forEach(p => {
             // Eventually, make actual decks
             // Current deck is 4x Bank, 4x Power Plant, 5x Footsoldier
-            const deck = p.playerInfo!.deck;
+            const deck = p.playerInfo.deck;
             deck.add(cards["footsoldier"] as Card, 5);
             deck.add(cards["power plant"] as Card, 4);
             deck.add(cards["bank"] as Card, 4);
             deck.shuffle();
             // Currently, players start with 5 cards in hand
-            for (let i = 0; i < 5; i++) p.playerInfo!.draw();
+            for (let i = 0; i < 5; i++) p.playerInfo.draw();
         }))
     }
 
@@ -81,7 +81,7 @@ class GameState {
         // Verify placement
         if (this.verifyPlacement(building.size, x, y)) {
             doubleIt((i, j)=>this.field[i][j].occupy([x, y], "building"), x, y, x+building.size, y+building.size);
-            this.getPlayer(owner).playerInfo!.buildings.push([x, y]); // Assumes playerinfo is not null
+            this.getPlayer(owner).playerInfo.buildings.push([x, y]); // Assumes playerinfo is not null
             const b = new Building(this, [x, y], building, owner);
             this.buildings.push(b);
             doubleIt((i, j) => ret[i][j].push({event: "building-spawn", params: [[...owner], [x, y]]}), 0, 0, 2, 2);
@@ -93,7 +93,7 @@ class GameState {
     spawnUnit(unit: UnitStats, x:number, y:number, owner: PlayerId): Unit | null {
         if (!this.field[x][y].occupant) {
             this.field[x][y].occupy([x, y], "unit");
-            this.getPlayer(owner).playerInfo!.units.push([x, y]);
+            this.getPlayer(owner).playerInfo.units.push([x, y]);
             const u = new Unit([x, y], unit, owner);
             this.units.push(u);
             return u;
@@ -138,10 +138,10 @@ class GameState {
         this.units.forEach(u=>concatEvents(ret, u.startTurn()));
 
         // Players draw a card at the start of their turn
-        this.players[this.turn].forEach(p => concatEvents(ret, p.playerInfo!.draw()));
+        this.players[this.turn].forEach(p => concatEvents(ret, p.playerInfo.draw()));
 
         // Reset the team's turnEnd status
-        this.turnEnd[this.turn] = this.players[this.turn].map(p=>!(p.playerInfo!.active && p.status === PlayerStatus.Active));
+        this.turnEnd[this.turn] = this.players[this.turn].map(p=>!(p.playerInfo.active && p.status === PlayerStatus.Active));
 
         /*// Start timer
         this.timerID = setTimeout(()=> this.endTurn(), TURN_LENGTH);*/
@@ -191,7 +191,7 @@ class GameState {
                 name: p.name,
                 faction: p.faction,
                 team: p.team,
-                playerInfo: p.playerInfo!.clientCopy(player)
+                playerInfo: p.playerInfo.clientCopy(player)
             }))),
             buildings: this.buildings,
             units: this.units
@@ -244,7 +244,7 @@ class GameState {
     move(player: PlayerId, unit: Coordinate, steps: Coordinate[]): PlayerArr<SocketEvent[]> {
         const p = this.getPlayer(player);
         const u = this.getUnit(unit);
-        if (!p || p.team !== this.turn || !p.playerInfo!.active) return emptyPArr(); // Not a player or not their turn
+        if (!p || p.team !== this.turn || !p.playerInfo.active) return emptyPArr(); // Not a player or not their turn
         if (!u || !arrEqual(u.owner, player)) return emptyPArr(); // Not a valid unit or not their unit
         if (steps.some(s => !s.every(x => isInt(x, 0, this.fieldSize - 1)))) return emptyPArr(); // Invalid coordinate
         return u.move(this, steps);
@@ -253,7 +253,7 @@ class GameState {
     attack(player: PlayerId, source: Coordinate, target: Coordinate): Events {
         const p = this.getPlayer(player);
         const o = this.getOccupant(source);
-        if (!p || p.team !== this.turn || !p.playerInfo!.active) return emptyPArr();
+        if (!p || p.team !== this.turn || !p.playerInfo.active) return emptyPArr();
         if (!o || !arrEqual(o.owner, player)) return emptyPArr();
         if (arrEqual(source, target) || !target.every(x => isInt(x, 0, this.fieldSize - 1))) return emptyPArr(); // Invalid target coordinate
         return o.attack(this, target);

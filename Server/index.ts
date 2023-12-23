@@ -7,7 +7,7 @@ import { socketTable, generateClientId } from "./users.js"
 import { isValidName } from "../Client/functions.js";
 import { TURN_LENGTH } from "../Client/constants.js";
 import { createLobby, joinLobby, filterLobby, lobbyTable, verifyLobby } from "./lobby.js";
-import { SocketState, Faction, Lobby, Player, SocketInfo, GameState, PlayerInfo, PlayerArr, SocketEvent, PlayerStatus} from "./types.js";
+import { SocketState, Faction, Lobby, ActiveLobby, Player, SocketInfo, GameState, PlayerInfo, PlayerArr, SocketEvent, PlayerStatus, SocketInfoLobby, PlayerInGame, SocketInfoGame} from "./types.js";
 import { isCoord, doubleIt } from "./utility.js";
 
 const clientPath = path.resolve("Client")
@@ -65,14 +65,13 @@ io.on("connection", (socket: Socket) => {
             socketTable[socket.id] = {
                 state: SocketState.Menu,
                 clientId: clientId,
-                info: undefined
-            }
+            };
             socket.emit("id", clientId);
         } // else, should be a recovered user already in the table
     }
     // This event is for testing only
     socket.on("test", (data)=> {
-        const mkPlayer = () => ({id: 'a', name: 'a', faction: "T" as Faction, team: 0, playerInfo: undefined, status: PlayerStatus.Active});
+        const mkPlayer = () => ({id: 'a', name: 'a', faction: "T" as Faction, team: 0, playerInfo: new PlayerInfo([0, 0]), status: PlayerStatus.Active});
         const a = new GameState([mkPlayer(), mkPlayer(), mkPlayer(), mkPlayer()]);
         console.log(a);
     });
@@ -88,7 +87,7 @@ io.on("connection", (socket: Socket) => {
                     // Remove player from lobby
                 case SocketState.Lobby: {
                     // Remove player from lobby
-                    const {player, lobby} = sock.info!;
+                    const {player, lobby} = sock.info;
                     lobby.players = lobby.players.filter(x => x.id !== socket.id);
                     if (lobby.players.length === 0) {
                         // Close lobby if lobby is empty
@@ -101,9 +100,12 @@ io.on("connection", (socket: Socket) => {
                     const {player, lobby} = sock.info;
                     // Mark status as disconnected
                     player.status = PlayerStatus.Disconnected;
+                    // Check for weirdness just in case
+                    if (!("gameInfo" in lobby)) throw new Error("Player in Game state with inactive lobby");
+                    if (!("playerInfo" in player)) throw new Error("Player in Game state but not in game");
                     // End turn automatically
                     let status = false;
-                    if (lobby.gameInfo!.active) status = lobby.gameInfo!.changeEndStatus(player.playerInfo!.self, true);
+                    if (lobby.gameInfo.active) status = lobby.gameInfo.changeEndStatus(player.playerInfo.self, true);
                     if (lobby.players.some(player => player.status !== PlayerStatus.Disconnected)) {
                         socket.to(lobby.id).emit("player-left-game", sock.clientId);
                         if (status) endTurn(lobby.gameInfo!); // Doing it before deleting socket from socketTable shouldn't break anything?
@@ -129,12 +131,11 @@ io.on("connection", (socket: Socket) => {
                 name: name,
                 faction: "T" as Faction,
                 team: 0,
-                playerInfo: undefined,
                 status: PlayerStatus.Active
             };
             const lobby = createLobby(player);
             sock.state = SocketState.Lobby;
-            sock.info = {player: player, lobby: lobby};
+            (sock as SocketInfoLobby).info = {player: player, lobby: lobby};
             socket.join(lobby.id);
             socket.emit("created-lobby", filterLobby(lobby));
             // Not emitting new-join because there shouldn't be anyone else in the lobby
@@ -152,14 +153,13 @@ io.on("connection", (socket: Socket) => {
                 name: name,
                 faction: "T",
                 team: 0,
-                playerInfo: undefined,
                 status: PlayerStatus.Active
             }
             const result = joinLobby(player, lobbyId);
             if (result.isSuccessful) {
                 const lobby = result.value as Lobby;
                 socketTable[socket.id].state = SocketState.Lobby;
-                socketTable[socket.id].info = {player: player, lobby: lobby};
+                (socketTable[socket.id] as SocketInfoLobby).info = {player: player, lobby: lobby};
                 socket.join(lobby.id);
 
                 // Set to unused faction and not full team by default
@@ -183,7 +183,7 @@ io.on("connection", (socket: Socket) => {
         console.log(socket.id + " is trying to change their team.");//
         const sock = socketTable[socket.id];
         if(checkState(sock, SocketState.Lobby)) {
-            const {player, lobby} = sock.info!;
+            const {player, lobby} = (sock as SocketInfoLobby).info!;
             player.team = 1 - player.team;
             socket.emit("team-change-success", player.team);
             socket.to(lobby.id).emit("team-change", { clientId: sock.clientId, team: player.team });
@@ -192,13 +192,12 @@ io.on("connection", (socket: Socket) => {
     socket.on("change-faction", (faction) => {
         console.log(socket.id + " is trying to change their faction.");//
         const sock = socketTable[socket.id];
-        if (!checkState(sock, SocketState.Lobby)) {
-            return;
-        } if (!(faction === "T" || faction === "M" || faction === "S" || faction === "A")) {
+        if (!checkState(sock, SocketState.Lobby)) return;
+        if (!(faction === "T" || faction === "M" || faction === "S" || faction === "A")) {
             // This should not happen from a regular client, as the client should have filtered already
-            socket.emit("faction-change-error", "invalid-faction")
+            socket.emit("faction-change-error", "invalid-faction");
         } else {
-            const {player, lobby} = sock.info!;
+            const {player, lobby} = (sock as SocketInfoLobby).info!;
             /*
             // Check that the faction is not the same as the current faction
             if (faction !== user.faction) {
@@ -220,20 +219,19 @@ io.on("connection", (socket: Socket) => {
         console.log(socket.id + " is trying to start their game.");//
         const sock = socketTable[socket.id];
         if(checkState(sock, SocketState.Lobby)) {
-            const {player, lobby} = sock.info!;
+            const {player, lobby} = (sock as SocketInfoLobby).info!;
             // Verify sender is host (might change or remove this part in the future?)
             if (lobby.players[0] !== player) {
                 socket.emit("game-start-error", "not-host"); // Should implement client to check for this first
             } else if(verifyLobby(lobby)) {
                 // Start the game
                 lobby.players.forEach(p=>{
-                    p.playerInfo = new PlayerInfo([0, -1]) // PlayerIds will be changed when GameState is constructed
+                    (p as PlayerInGame).playerInfo = new PlayerInfo([0, -1]) // PlayerIds will be changed when GameState is constructed
                     socketTable[p.id].state = SocketState.Game; // socketTable[p.id] should never be undefined
                 }); 
-                lobby.gameInfo = new GameState(lobby.players, 50);
-                lobby.gameInfo.onGameEnd = () => {
-                    clearTimeout(lobby.gameInfo!.timerID);
-                    lobby.active = false;
+                (lobby as ActiveLobby).gameInfo = new GameState(lobby.players as PlayerInGame[], 50);
+                (lobby as ActiveLobby).gameInfo.onGameEnd = () => {
+                    clearTimeout((lobby as ActiveLobby).gameInfo.timerID);
                     // Change statuses
                     if (lobby.players.reduceRight((acc: number, p, i) => {
                         if (p.status === PlayerStatus.Disconnected) {
@@ -253,11 +251,10 @@ io.on("connection", (socket: Socket) => {
                         delete lobbyTable[lobby.id];
                     }
                 }
-                lobby.active = true;
                 // Send specialized GameState to each player
-                lobby.players.forEach(p=>sockets.get(p.id)?.emit("game-start", lobby.gameInfo!.clientCopy(p.playerInfo!.self)));
+                lobby.players.forEach(p=>sockets.get(p.id)?.emit("game-start", (lobby as ActiveLobby).gameInfo.clientCopy((p as PlayerInGame).playerInfo.self)));
                 console.log(socket.id + " has started game: " + lobby.id);//
-                startTurn(lobby.gameInfo);
+                startTurn((lobby as ActiveLobby).gameInfo);
             } else {
                 // Should we have the client filter this first?
                 socket.emit("game-start-error", "invalid-lobby");
@@ -269,9 +266,9 @@ io.on("connection", (socket: Socket) => {
         console.log(socket.id + " is setting their turn end status to " + status);//
         const sock = socketTable[socket.id];
         if (checkState(sock, SocketState.Game)) {
-            const lobby = sock.info!.lobby;
-            const game = lobby.gameInfo!;
-            const self = sock.info!.player.playerInfo!.self;
+            const lobby = (sock as SocketInfoGame).info.lobby;
+            const game = lobby.gameInfo;
+            const self = (sock as SocketInfoGame).info.player.playerInfo!.self;
             if (!game.active) return;
             socket.to(lobby.id).emit("turn-status-change", self, status);
             if (game.changeEndStatus(self, status)) endTurn(game);
@@ -283,10 +280,10 @@ io.on("connection", (socket: Socket) => {
             // Validate unit and steps types (further verification performed in game.move())
             if (!(isCoord(unit) && Array.isArray(steps) && steps.every(isCoord))) return; // Invalid types
             
-            const info = sock.info!;
-            const game = info.lobby.gameInfo!;
+            const info = (sock as SocketInfoGame).info;
+            const game = info.lobby.gameInfo;
             if (!game.active) return;
-            const events = game.move(info.player.playerInfo!.self, unit, steps);
+            const events = game.move(info.player.playerInfo.self, unit, steps);
             
             // Broadcast events
             sendEvents(events, game);
@@ -297,9 +294,9 @@ io.on("connection", (socket: Socket) => {
         if (checkState(sock, SocketState.Game)) {
             // Validate correct input types
             if (!isCoord(source) || !isCoord(target)) return;
-            const game = sock.info!.lobby.gameInfo!;
+            const game = (sock as SocketInfoGame).info.lobby.gameInfo;
             if (!game.active) return;
-            const events = game.attack(sock.info!.player.playerInfo!.self, source, target);
+            const events = game.attack((sock as SocketInfoGame).info.player.playerInfo!.self, source, target);
 
             sendEvents(events, game);
         }

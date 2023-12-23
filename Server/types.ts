@@ -24,15 +24,30 @@ export enum SocketState {
     GameEnd = 3
 }
 
-export type SocketInfo = {
-    state: SocketState.Menu,
-    clientId: string
-    info: undefined
-} | {
-    state: SocketState.Lobby | SocketState.Game | SocketState.GameEnd,
-    clientId: string,
-    info: { player: Player, lobby: Lobby }
+export interface SocketInfoMenu {
+    state: SocketState.Menu;
+    clientId: string;
 }
+
+export interface SocketInfoLobby {
+    state: SocketState.Lobby;
+    clientId: string;
+    info: { player: Player, lobby: Lobby };
+}
+
+export interface SocketInfoGame {
+    state: SocketState.Game;
+    clientId: string;
+    info: { player: PlayerInGame, lobby: ActiveLobby };
+}
+
+export interface SocketInfoGameEnd {
+    state: SocketState.GameEnd;
+    clientId: string;
+    info: { player: PlayerInGame, lobby: Lobby };
+}
+
+export type SocketInfo = SocketInfoMenu | SocketInfoLobby | SocketInfoGame | SocketInfoGameEnd;
 
 export enum PlayerStatus {
     Active = 0,
@@ -40,21 +55,27 @@ export enum PlayerStatus {
     GameEnd = 2
 }
 
-export type Player = {
-    id: string, // Server side, this is socketId; client side, this is client id
-    name: string
-    faction: Faction,
-    team: Team,
-    playerInfo?: PlayerInfo, // Undefined while in lobby
-    status: PlayerStatus
-};
+export interface Player {
+    id: string;
+    name: string;
+    faction: Faction;
+    team: Team;
+    status: PlayerStatus;
+}
 
-export type Lobby = {
-    players: Player[],
-    id: string,
-    active: boolean // Whether or not the game is active
-    gameInfo: undefined | GameState // Guaranteed to be defined when active
-};
+export interface PlayerInGame extends Player {
+    playerInfo: PlayerInfo;
+}
+
+export interface Lobby {
+    players: Player[];
+    id: string;
+}
+
+export interface ActiveLobby extends Lobby {
+    players: PlayerInGame[];
+    gameInfo: GameState
+}
 
 export type Result<T, U> = {
     isSuccessful: boolean,
