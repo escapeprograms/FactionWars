@@ -7,8 +7,8 @@
         "range": 0,
         "splash": 0,
         "speed": 1,
-        "actives": "Active ability name here, if any",
-        "passives": "Possibly passive ability here if can't fit into attributes?",
+        "actives": ["Array of active ability names"],
+        "passives": ["Passive ability names"],
         "attributes": []
     },
 
@@ -20,8 +20,8 @@
         "range": 5,
         "splash": 0,
         "speed": 4,
-        "actives": null,
-        "passives": null,
+        "actives": [],
+        "passives": [],
         "attributes": []
     }
 }

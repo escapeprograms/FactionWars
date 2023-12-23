@@ -76,7 +76,7 @@ export class PlayerInfo {
                             throw new Error("Spawn type invalid");
                         }
                     case "gain":
-                        const player = e.target === self ? this : game.getPlayer(targets[e.target]).playerInfo!; // Assumes has to be self or variable
+                        const player = e.target === "self" ? this : game.getPlayer(targets[e.target]).playerInfo!; // Assumes has to be self or variable
                         if (e.type === "money") {
                             player.money += e.quantity;
                         } else {
