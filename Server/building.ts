@@ -1,4 +1,4 @@
-import { Coordinate, Player, Unit, GameState, emptyPArr, PlayerArr, SocketEvent, Events } from "./types.js";
+import { Coordinate, PlayerId, Player, Unit, GameState, emptyPArr, PlayerArr, SocketEvent, Events } from "./types.js";
 import { arrEqual, concatEvents, dist, doubleIt } from "./utility.js";
 import { PlayerInfo } from "./player.js";
 import { withinRadius } from "../Client/functions.js";
@@ -22,12 +22,12 @@ type BuildingStats  = {
 class Building {
     public loc: Coordinate; // Coordinates of upper left tile
     public stats: BuildingStats;
-    public owner: Coordinate; // [team, number] of player
+    public owner: PlayerId; // [team, number] of player
     public health: number; // Current health
     public buildLeft: number; // Turns left for buildTime
     public active: boolean = false; // Whether the building is active or inactive (disactivated)
     public attacks = 0; // Number of times the building can attack this turn
-    constructor(game: GameState, loc: Coordinate, stats: BuildingStats, player: Coordinate) {
+    constructor(game: GameState, loc: Coordinate, stats: BuildingStats, player: PlayerId) {
         this.loc = loc;
         this.stats = stats;
         this.owner = player;

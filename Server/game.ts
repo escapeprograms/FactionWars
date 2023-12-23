@@ -1,4 +1,4 @@
-import { CardType, Player, Team, Coordinate, ClientGameState, Faction, PlayerArr, emptyPArr, SocketEvent, Events, PlayerStatus } from "./types.js";
+import { CardType, Player, Team, Coordinate, PlayerId, ClientGameState, Faction, PlayerArr, emptyPArr, SocketEvent, Events, PlayerStatus } from "./types.js";
 import { Building, BuildingStats, Unit, UnitStats, Card, Deck } from "./types.js";
 import { concatEvents, arrEqual, deepCopy, doubleIt, isCoord, isInt } from "./utility.js";
 import { socketTable } from "./users.js";
@@ -76,7 +76,7 @@ class GameState {
 
     // Spawns a building with its top left corner at (x, y)
     // Returns socket events for the building spawn
-    spawnBuilding(building: BuildingStats, x:number, y:number, owner: Coordinate): Events {
+    spawnBuilding(building: BuildingStats, x:number, y:number, owner: PlayerId): Events {
         const ret = emptyPArr<SocketEvent>();
         // Verify placement
         if (this.verifyPlacement(building.size, x, y)) {
@@ -90,7 +90,7 @@ class GameState {
         }
         return ret;
     }
-    spawnUnit(unit: UnitStats, x:number, y:number, owner: Coordinate): Unit | null {
+    spawnUnit(unit: UnitStats, x:number, y:number, owner: PlayerId): Unit | null {
         if (!this.field[x][y].occupant) {
             this.field[x][y].occupy([x, y], "unit");
             this.getPlayer(owner).playerInfo!.units.push([x, y]);
@@ -150,7 +150,7 @@ class GameState {
     }
 
     // Ends a player's turn and returns whether or not the entire turn can be ended
-    changeEndStatus(player: Coordinate, status: boolean): boolean {
+    changeEndStatus(player: PlayerId, status: boolean): boolean {
         if (player.every(x => isInt(x, 0, 1)) && this.getPlayer(player).team === this.turn) {
             this.turnEnd[player[0]][player[1]] = status;
             return status && this.turnEnd[player[0]][1-player[1]];
@@ -158,7 +158,7 @@ class GameState {
         return false;
     }
 
-    getPlayer(c: Coordinate) {
+    getPlayer(c: PlayerId) {
         return this.players[c[0]][c[1]];
     }
     // Oh no, code duplication!?!
@@ -172,7 +172,7 @@ class GameState {
         return this.units.find(u => arrEqual(u.loc, c));
     }
     // Versatile but painful to use due to typing
-    get(c: Coordinate, type: "unit" | "building" | "tile" | "player" | null) {
+    get(c: Coordinate | PlayerId, type: "unit" | "building" | "tile" | "player" | null) {
         if (type === "unit" || type === "building") return this[type + "s" as "units" | "buildings"].find(x => arrEqual(x.loc, c));
         else if (type === "tile" || type === "player") return this[type === "tile" ? "field" : "players"][c[0]][c[1]];
         else return null;
@@ -181,7 +181,7 @@ class GameState {
         return this.get(c, this.getTile(c).occupantType) as Building | Unit | null | undefined;
     }
     // Returns a ClientGameState for the specified client, if any
-    clientCopy(player?: Coordinate): ClientGameState {
+    clientCopy(player?: PlayerId): ClientGameState {
         return {
             turn: this.turn,
             field: this.field,
@@ -241,7 +241,7 @@ class GameState {
         return valid;
     }
 
-    move(player: Coordinate, unit: Coordinate, steps: Coordinate[]): PlayerArr<SocketEvent[]> {
+    move(player: PlayerId, unit: Coordinate, steps: Coordinate[]): PlayerArr<SocketEvent[]> {
         const p = this.getPlayer(player);
         const u = this.getUnit(unit);
         if (!p || p.team !== this.turn || !p.playerInfo!.active) return emptyPArr(); // Not a player or not their turn
@@ -250,7 +250,7 @@ class GameState {
         return u.move(this, steps);
     }
 
-    attack(player: Coordinate, source: Coordinate, target: Coordinate): Events {
+    attack(player: PlayerId, source: Coordinate, target: Coordinate): Events {
         const p = this.getPlayer(player);
         const o = this.getOccupant(source);
         if (!p || p.team !== this.turn || !p.playerInfo!.active) return emptyPArr();

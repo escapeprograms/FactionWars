@@ -1,9 +1,9 @@
-import { Coordinate, Events, SocketEvent, Player, Card, Deck, GameState, units, buildings, emptyPArr } from "./types.js";
+import { Coordinate, PlayerId, Events, SocketEvent, Player, Card, Deck, GameState, units, buildings, emptyPArr } from "./types.js";
 import { arrEqual, concatEvents, doubleIt, isInt } from "./utility.js";
 import { MAX_HAND_SIZE } from "../Client/constants.js";
 
 export class PlayerInfo {
-    public self: Coordinate;
+    public self: PlayerId;
     public cards: Card[] = [];
     public deck: Deck = new Deck();
     public buildings: Coordinate[] = []; // Top left corners of their buildings
@@ -12,7 +12,7 @@ export class PlayerInfo {
     public energy = 0; // Current energy available
     public totalEnergy = 0; // Total energy
     public active = true; // Becomes false if they lose their HQ or disconnect
-    constructor(self: Coordinate) {
+    constructor(self: PlayerId) {
         this.self = self;
     }
     draw(): Events {
@@ -125,7 +125,7 @@ export class PlayerInfo {
         });
         return true;
     }
-    clientCopy(player?: Coordinate) {
+    clientCopy(player?: PlayerId) {
         return {
             self: this.self,
             cards: player === this.self ? this.cards : this.cards.length,

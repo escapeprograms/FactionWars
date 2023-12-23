@@ -83,6 +83,8 @@ export enum CardType {
 
 export type Coordinate = [number, number];
 
+export type PlayerId = [Team, number];
+
 export type SocketEvent = {event: string, params: any}
 
 export type PlayerArr<T> = [T[], T[]];

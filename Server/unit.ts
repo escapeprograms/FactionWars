@@ -1,4 +1,4 @@
-import { Coordinate, PlayerArr, emptyPArr, SocketEvent, Events, Building, GameState } from "./types.js";
+import { Coordinate, PlayerId, PlayerArr, emptyPArr, SocketEvent, Events, Building, GameState } from "./types.js";
 import { arrEqual, concatEvents, dist, doubleIt } from "./utility.js";
 import { withinRadius } from "../Client/functions.js";
 
@@ -19,13 +19,13 @@ type UnitStats  = {
 class Unit {
     public loc: Coordinate;
     public stats: UnitStats;
-    public owner: Coordinate; // [team, number] of player
+    public owner: PlayerId; // [team, number] of player
     public health: number; // Current health
     public steps = 0; // # of steps available
     public moves = 0; // # of times left the player can move the unit
     public attacks = 0; // # of times left the unit can attack
     // Add team and/or faction property?
-    constructor(loc: Coordinate, stats: UnitStats, player: Coordinate) {
+    constructor(loc: Coordinate, stats: UnitStats, player: PlayerId) {
         this.loc = loc;
         this.stats = stats;
         this.owner = player;

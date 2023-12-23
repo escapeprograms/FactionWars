@@ -227,7 +227,7 @@ io.on("connection", (socket: Socket) => {
             } else if(verifyLobby(lobby)) {
                 // Start the game
                 lobby.players.forEach(p=>{
-                    p.playerInfo = new PlayerInfo([-1, -1]) // Coordinates will be changed when GameState is constructed
+                    p.playerInfo = new PlayerInfo([0, -1]) // PlayerIds will be changed when GameState is constructed
                     socketTable[p.id].state = SocketState.Game; // socketTable[p.id] should never be undefined
                 }); 
                 lobby.gameInfo = new GameState(lobby.players, 50);
