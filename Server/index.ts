@@ -98,7 +98,6 @@ io.on("connection", (socket: Socket) => {
                     }
                 }
                 case SocketState.Game: {
-                    // TODO
                     const {player, lobby} = sock.info;
                     // Mark status as disconnected
                     player.status = PlayerStatus.Disconnected;
@@ -235,24 +234,23 @@ io.on("connection", (socket: Socket) => {
                 lobby.gameInfo.onGameEnd = () => {
                     clearTimeout(lobby.gameInfo!.timerID);
                     lobby.active = false;
-                    // Remove disconnected players
+                    // Change statuses
                     if (lobby.players.reduceRight((acc: number, p, i) => {
                         if (p.status === PlayerStatus.Disconnected) {
-                            // Remove player from lobby
+                            // Remove disconnected players
+                            // Remove player from lobby & socketTable
                             lobby.players.splice(i, 1);
-                            // Remove player from SocketTable
                             delete socketTable[p.id];
                             acc++;
+                        } else {
+                            // Change status of connected players
+                            p.status = PlayerStatus.GameEnd;
+                            socketTable[p.id].state = SocketState.GameEnd;
                         }
                         return acc;
                     }, 0) === 0) {
                         // All players have disconnected, can safely delete lobby
                         delete lobbyTable[lobby.id];
-                    } else {
-                        lobby.players.forEach(p => {
-                            socketTable[p.id].state = SocketState.GameEnd;
-                            p.status = PlayerStatus.GameEnd;
-                        });
                     }
                 }
                 lobby.active = true;
