@@ -105,7 +105,7 @@ io.on("connection", (socket: Socket) => {
                     // End turn automatically
                     let status = false;
                     if (lobby.gameInfo!.active) status = lobby.gameInfo!.changeEndStatus(player.playerInfo!.self, true);
-                    if (lobby.players.reduce((acc: number, e) => acc + e.status !== PlayerStatus.Disconnected ? 1 : 0, 0) > 0) {
+                    if (lobby.players.some(player => player.status !== PlayerStatus.Disconnected) {
                         socket.to(lobby.id).emit("player-left-game", sock.clientId);
                         if (status) endTurn(lobby.gameInfo!); // Doing it before deleting socket from socketTable shouldn't break anything?
                     } else {

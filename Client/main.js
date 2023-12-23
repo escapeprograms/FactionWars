@@ -227,9 +227,7 @@ function switchToLobby(name, lobby, host = false) {
         button(130, 10, 50, 50, "S", () => changeMyFaction("S")),
         button(190, 10, 50, 50, "A", () => changeMyFaction("A")),
         button(10, 70, 230, 50, "Change Teams", changeMyTeam),
-        //
-        button(250, 10, 120, 50, "Start Game", ()=>socket.emit("start-game")),//
-        //
+        button(250, 10, 120, 50, "Start Game", () => socket.emit("start-game")),
         new Text(625, 75, lobby.id, 100),
         teamBox(10, "red", redList),
         teamBox(405, "blue", blueList),
@@ -269,16 +267,17 @@ socket.on("new-join", ({clientId, name, faction, team}) => {
     players.push(new Player(clientId, name, faction, team));
     updateUI();
 });
-//
-socket.on("game-start", (data)=> {
-    console.log("Recieved 'game-start'!");
+
+socket.on("game-start", (data) => {
+    console.log("Received 'game-start'!");
     console.log(data);
-})
+});
+
 socket.on("player-left-lobby", id => {
     const index = players.findIndex(player => player.id === id);
     // Just in case
     if (index < 0) {
-        console.log('ERROR!!!: Recieved "player-left-lobby" but could not find player!');
+        console.log('ERROR!!!: Received "player-left-lobby" but could not find player!');
     }
     players.splice(index, 1);
     updateUI();
@@ -287,7 +286,7 @@ socket.on("player-left-lobby", id => {
 socket.on("faction-change", ({clientId, faction}) => {
     const player = players.find(p => p.id === clientId);
     if (!player) {
-        console.log('ERROR!!!: Recieved "faction" but could not find player!');
+        console.log('ERROR!!!: Received "faction-change" but could not find player!');
     }
     player.changeFaction(faction);
 });
@@ -295,7 +294,7 @@ socket.on("faction-change", ({clientId, faction}) => {
 socket.on("team-change", ({clientId, team}) => {
     const player = players.find(p => p.id === clientId);
     if (!player) {
-        console.log('ERROR!!!: Recieved "faction" but could not find player!');
+        console.log('ERROR!!!: Received "team-change" but could not find player!');
     }    
     player.changeTeam(team);
 });

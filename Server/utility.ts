@@ -13,7 +13,7 @@ export function concatEvents(e1: Events, e2: Events) {
 // Makes a deep copy of objects and primitives
 // Does not work witih functions and symbols
 export function deepCopy<T>(obj: T): T {
-    if (typeof(obj === "object")) {
+    if (typeof obj === "object") {
         const copy = {...obj};
         for (let key in copy) {
             if (typeof copy[key] === "object") {

@@ -51,14 +51,14 @@ export function joinLobby(player: Player, id: string): Result<Lobby, LobbyJoinEr
 // Converts socketIds from users the given lobby into clientIds and returns a new lobby object
 export function filterLobby(lobby: Lobby): Lobby {
     return {
-        players: lobby.players.map(player => { return {
+        players: lobby.players.map(player => ({
             id: socketTable[player.id].clientId,
             name: player.name,
             faction: player.faction,
             team: player.team,
             playerInfo: player.playerInfo,
-            connected: player.connected
-        }}),
+            status: player.status
+        })),
         id: lobby.id,
         active: lobby.active,
         gameInfo: lobby.gameInfo // DOES NOT FILTER GAMESTATE!
