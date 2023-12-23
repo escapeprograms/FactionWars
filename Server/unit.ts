@@ -1,6 +1,6 @@
 import { Coordinate, PlayerId, PlayerArr, emptyPArr, SocketEvent, Events, Building, GameState } from "./types.js";
 import { arrEqual, concatEvents, dist, doubleIt } from "./utility.js";
-import { withinRadius } from "../Client/functions.js";
+import { withinRadiusInBounds } from "../Client/functions.js";
 
 export {Unit, UnitStats};
 
@@ -80,7 +80,7 @@ class Unit {
         // NOTE: The code does not check for friendly fire!
         // Will have to adjust victim finding if field ever becomes non-square
         let victim;
-        (withinRadius(target, this.stats.splash, 0, 0, game.fieldSize-1, game.fieldSize-1) as Coordinate[]).forEach(v => {
+        (withinRadiusInBounds(target, this.stats.splash, 0, 0, game.fieldSize-1, game.fieldSize-1) as Coordinate[]).forEach(v => {
             if (victim = game.getOccupant(v) as Unit | Building | null) concatEvents(ret, victim.takeDamage(game, this.stats.damage));
         });
         
