@@ -1,13 +1,16 @@
 import { isValidName } from "./functions.js";
 
+// temporary
+let io: any;
+
 const socket = io();
 
-let myId;
-socket.on("id", id => myId = id);
+let myId: string;
+socket.on("id", (id: string) => myId = id);
 
-const game = document.getElementById("game");
-const canvas = document.getElementById("canvas");
-const context = canvas.getContext("2d");
+const game = document.getElementById("game")!;
+const canvas = document.getElementById("canvas") as HTMLCanvasElement;
+const context = canvas.getContext("2d")!;
 
 // see https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D
 context.font = "20px sans-serif";
@@ -16,14 +19,19 @@ context.textBaseline = "middle";
 
 // parameters x and y represent top left corner unless specified otherwise
 
+interface Drawable {
+    draw: () => void;
+    clear: () => void;
+}
+
 class Rect {
-    constructor(x, y, width, height, color = "white") {
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
-        this.color = color;
-    }
+    constructor(
+        public x: number,
+        public y: number,
+        public width: number,
+        public height: number,
+        public color = "white"
+    ) {}
 
     draw() {
         context.fillStyle = this.color;
@@ -33,12 +41,12 @@ class Rect {
 
 class Text {
     // x and y represent center
-    constructor(x, y, text, fontSize = 20) {
-        this.x = x;
-        this.y = y;
-        this.text = text;
-        this.fontSize = fontSize;
-    }
+    constructor(
+        public x: number,
+        public y: number,
+        public text: string,
+        public fontSize = 20
+    ) {}
 
     draw() {
         context.fillStyle = "black";
@@ -47,11 +55,10 @@ class Text {
     }
 }
 
-class HtmlUiElement {
-    constructor(element) {
-        this.element = element;
-        this.drawn = false;
-    }
+class HtmlUiElement<T extends HTMLElement> implements Drawable {
+    drawn = false;
+
+    constructor(public element: T) {}
 
     draw() {
         if (!this.drawn) {
@@ -68,25 +75,15 @@ class HtmlUiElement {
     }
 }
 
-class Composite {
-    constructor(elems) {
-        this.elems = elems;
-    }
+class Composite implements Drawable {
+    constructor(public elems: Partial<Drawable>[]) {}
 
     draw() {
-        for (const elem of this.elems) {
-            if ("draw" in elem) {
-                elem.draw();
-            }
-        }
+        this.elems.forEach(elem => elem.draw?.());
     }
 
     clear() {
-        for (const elem of this.elems) {
-            if ("clear" in elem) {
-                elem.clear();
-            }
-        }
+        this.elems.forEach(elem => elem.clear?.());
     }
 }
 
@@ -94,7 +91,7 @@ function background(color = "lightgray") {
     return new Rect(0, 0, canvas.width, canvas.height, color);
 }
 
-function button(x, y, width, height, text, callback) {
+function button(x: number, y: number, width: number, height: number, text: string, callback: () => void) {
     const button = document.createElement("button");
     // button.type = "button";
     button.style.position = "absolute";
@@ -108,7 +105,7 @@ function button(x, y, width, height, text, callback) {
     return new HtmlUiElement(button);
 }
 
-function textInput(x, y, length, label, callback) {
+function textInput(x: number, y: number, length: number, label: string, callback: (s: string) => void) {
     const input = document.createElement("input");
     input.style.position = "absolute";
     input.style.left = x + "px";
@@ -124,7 +121,7 @@ function textInput(x, y, length, label, callback) {
     return new HtmlUiElement(input);
 }
 
-function switchTo(newScreen) {
+function switchTo(newScreen: Drawable) {
     screen.clear();
     newScreen.draw();
     screen = newScreen;
@@ -153,7 +150,7 @@ const joinPrompt = (() => {
 })();
 
 // for now lobby player list is global so it will persist between lobby screens
-let players = [];
+let players: Player[] = [];
 const redList = teamList();
 const blueList = teamList();
 
@@ -172,26 +169,34 @@ function updateUI() {
     }
 }
 
-class Player {
-    constructor(id, name, faction = "T", team = 0) {
-        this.id = id;
-        this.name = name;
-        this.faction = faction;
-        this.team = team;
-    }
+type Faction = "T" | "M" | "S" | "A";
+type Team = 0 | 1;
 
-    changeFaction(faction) {
+interface Lobby {
+    id: string;
+    players: Player[];
+}
+
+class Player {
+    constructor(
+        public id: string,
+        public name: string,
+        public faction: Faction,
+        public team: Team
+    ) {}
+
+    changeFaction(faction: Faction) {
         this.faction = faction;
         updateUI();
     }
 
-    changeTeam(team) {
+    changeTeam(team: Team) {
         this.team = team;
         updateUI();
     }
 }
 
-function teamBox(x, color, list) {
+function teamBox(x: number, color: string, list: HTMLUListElement) {
     const box = document.createElement("div");
     box.style.position = "absolute";
     box.style.left = x + "px";
@@ -203,12 +208,12 @@ function teamBox(x, color, list) {
     return new HtmlUiElement(box);
 }
 
-function switchToLobby(name, lobby, host = false) {
+function switchToLobby(name: string, lobby: Lobby, host = false) {
     players = lobby.players.map(player =>
         new Player(player.id, player.name, player.faction, player.team));
-    const me = players.find(player => player.id === myId);
+    const me = players.find(player => player.id === myId)!;
 
-    function changeMyFaction(faction) {
+    function changeMyFaction(faction: Faction) {
         if (me.faction !== faction) {
             me.changeFaction(faction);
             socket.emit("change-faction", faction);
@@ -216,7 +221,7 @@ function switchToLobby(name, lobby, host = false) {
     }
 
     function changeMyTeam() {
-        me.changeTeam(1 - me.team);
+        me.changeTeam(1 - me.team as Team);
         socket.emit("change-team");
     }
 
@@ -237,43 +242,50 @@ function switchToLobby(name, lobby, host = false) {
     updateUI();
 }
 
-function createLobby(name) {
+function createLobby(name: string) {
     if (!isValidName(name)) {
         console.log("invalid name");
     } else {
         socket.emit("create-game", name);
-        socket.once("created-lobby", lobby => {
+        socket.once("created-lobby", (lobby: Lobby) => {
             console.log(lobby);
             switchToLobby(name, lobby, true);
         });
     }
 }
 
-function joinLobby(name, code) {
+function joinLobby(name: string, code: string) {
     if (!isValidName(name)) console.log("invalid name");
     else {
         socket.emit("join-game", name, code);
-        socket.once("lobby-join-result", (ok, lobbyOrMessage) => {
-            if (!ok) console.log(lobbyOrMessage);
+        socket.once("lobby-join-result", (ok: boolean, joinResult: Lobby | string) => {
+            if (!ok) console.log(joinResult);
             else {
-                console.log(lobbyOrMessage);
-                switchToLobby(name, lobbyOrMessage);
+                console.log(joinResult);
+                switchToLobby(name, joinResult as Lobby);
             }
         });
     }
 }
 
-socket.on("new-join", ({clientId, name, faction, team}) => {
+interface PlayerData {
+    clientId: string;
+    name: string;
+    faction: Faction;
+    team: Team;
+}
+
+socket.on("new-join", ({clientId, name, faction, team}: PlayerData) => {
     players.push(new Player(clientId, name, faction, team));
     updateUI();
 });
 
-socket.on("game-start", (data) => {
+socket.on("game-start", (data: any) => {
     console.log("Received 'game-start'!");
     console.log(data);
 });
 
-socket.on("player-left-lobby", id => {
+socket.on("player-left-lobby", (id: string) => {
     const index = players.findIndex(player => player.id === id);
     // Just in case
     if (index < 0) {
@@ -283,21 +295,33 @@ socket.on("player-left-lobby", id => {
     updateUI();
 });
 
-socket.on("faction-change", ({clientId, faction}) => {
+interface FactionChange {
+    clientId: string;
+    faction: Faction;
+}
+
+socket.on("faction-change", ({clientId, faction}: FactionChange) => {
     const player = players.find(p => p.id === clientId);
     if (!player) {
         console.log('ERROR!!!: Received "faction-change" but could not find player!');
+    } else {
+        player.changeFaction(faction);
     }
-    player.changeFaction(faction);
 });
 
-socket.on("team-change", ({clientId, team}) => {
+interface TeamChange {
+    clientId: string;
+    team: Team;
+}
+
+socket.on("team-change", ({clientId, team}: TeamChange) => {
     const player = players.find(p => p.id === clientId);
     if (!player) {
         console.log('ERROR!!!: Received "team-change" but could not find player!');
-    }    
-    player.changeTeam(team);
+    } else {
+        player.changeTeam(team);
+    }
 });
 
-let screen = mainMenu;
+let screen: Drawable = mainMenu;
 screen.draw();
