@@ -1,17 +1,40 @@
-import { CardType, Player, Team } from "./types.js";
-import buildings from "./../Client/buildings.json" assert { type: "json" }; // See if this works or needs parsing
-import units from "./../Client/units.json" assert {type: "json"}; // See if this works or needs parsing
+import { CardType, Team, Coordinate, PlayerId, ClientGameState, Faction, PlayerArr, emptyPArr, SocketEvent, Events, PlayerStatus, PlayerInGame } from "./types.js";
+import { Building, BuildingStats, Unit, UnitStats, Card, Deck } from "./types.js";
+import { concatEvents, arrEqual, deepCopy, doubleIt, isCoord, isIntInRange } from "./utility.js";
+import { socketTable } from "./users.js";
+import { PlayerInfo } from "./player.js";
+import { TURN_LENGTH } from "../Client/constants.js";
+import b from "./../Client/buildings.json" assert { type: "json" };
+import u from "./../Client/units.json" assert {type: "json"}; // See if this works or needs parsing
+import c from "./../Client/cards.json" assert {type: "json"};
 
-class GameInfo {
-    private turn: Team = 0;
-    private field: Tile[][] = []; // [0][0] is top left corner. [x] moves right, [y] moves down
-    private fieldSize: number // Not sure if this is necessary
-    private players: Player[][] = [[], []];
+export { GameState, Tile, buildings, units, cards }; // Tile, Field
 
-    constructor (players: Player[], fieldSize=50) {
-        players.forEach(p=>this.players[p.team].push(p));
+const buildings = b as {[key: string]: BuildingStats}; // To establish type
+const units = u as {[key: string]: UnitStats};
+const cards = c as {[key: string]: Card};
+
+class GameState {
+    public turn: Team = 0;
+    public field: Tile[][] = []; // [0][0] is top left corner. [x] moves right, [y] moves down
+    public fieldSize: number // For convenience, and assuming square fields
+    public players: PlayerArr<PlayerInGame> = [[], []]; // [Team0Players, Team1Players]
+    public buildings: Building[] = []; // Contains the only references to in play buildings
+    public units: Unit[] = []; // Contains the only references to in play units
+    public turnEnd: PlayerArr<boolean> = [[false, false], [false, false]]; // Whether each player has ended their turn
+    public timerID = setTimeout(()=>undefined, 1); // Id for setTimeout();
+    public onGameEnd: () => void; // To be called when the game ends
+    public active: boolean = true; // false if game has ended
+
+    constructor (players: PlayerInGame[], fieldSize=50, onGameEnd=()=>{}) {
+        players.forEach(p=>{
+            p.playerInfo.self = [p.team, this.players[p.team].length];
+            this.players[p.team].push(p)
+        });
         this.fieldSize = fieldSize;
-        this.setField(fieldSize);
+        this.onGameEnd = onGameEnd;
+        this.setField(fieldSize); // Spawn HQs
+        this.setup(); //  Give cards to each player
     }
 
     setField(size: number) {
@@ -30,234 +53,243 @@ class GameInfo {
         // TODO: Fix later: Right now, assumes there is enough space for the HQs
         if (size < stats.size * 2 ) {throw new Error("field too small");}
         const obj = this;
-        doubleIt((i, j) => obj.spawnBuilding(stats, i * (size - stats.size), j * (size - stats.size), obj.players[i][j]), 0, 0, 1, 1);
-        
+        doubleIt((i, j) => obj.spawnBuilding(stats, i * (size - stats.size), j * (size - stats.size), [i, j]), 0, 0, 2, 2);
+        // Spawn 1 footsoldier per player
+        // TODO: Later, decide on location and spacing
+        const uStats = units["footsoldier"];
+        doubleIt((i, j) => obj.spawnUnit(uStats, stats.size + i * (size - 2 * stats.size - 1), stats.size + j * (size - 2 * stats.size - 1), [i, j]), 0, 0, 2, 2);
+    }
+    setup() {
+        // Initialize deck and hands
+        this.players.forEach(t => t.forEach(p => {
+            // Eventually, make actual decks
+            // Current deck is 4x Bank, 4x Power Plant, 5x Footsoldier
+            const deck = p.playerInfo.deck;
+            deck.add(cards["footsoldier"] as Card, 5);
+            deck.add(cards["power plant"] as Card, 4);
+            deck.add(cards["bank"] as Card, 4);
+            deck.shuffle();
+            // Currently, players start with 5 cards in hand
+            for (let i = 0; i < 5; i++) p.playerInfo.draw();
+        }))
     }
 
     // Spawns a building with its top left corner at (x, y)
-    // Not sure what to return if invalid
-    spawnBuilding(building: BuildingStats, x:number, y:number, owner: Player): Building | null {
+    // Returns socket events for the building spawn
+    spawnBuilding(building: BuildingStats, x:number, y:number, owner: PlayerId): Events {
+        const ret = emptyPArr<SocketEvent>();
         // Verify placement
         if (this.verifyPlacement(building.size, x, y)) {
-            const tiles: Tile[] = [];
-            const obj = this;
-            doubleIt((i, j)=>tiles.push(obj.field[i][j]), x, y, x+building.size, y+building.size);
-            const b = new Building(tiles, building, owner);
-            owner.playerInfo!.buildings.push(b); // Assumes playerinfo is not null
-            tiles.forEach(t=>t.build(b));
-            // Maybe add stuff for build time?
-            return b;
-        } else  {
+            doubleIt((i, j)=>this.field[i][j].occupy([x, y], "building"), x, y, x+building.size, y+building.size);
+            this.getPlayer(owner).playerInfo.buildings.push([x, y]); // Assumes playerinfo is not null
+            const b = new Building(this, [x, y], building, owner);
+            this.buildings.push(b);
+            doubleIt((i, j) => ret[i][j].push({event: "building-spawn", params: [[...owner], [x, y]]}), 0, 0, 2, 2);
+            // Attempt to activate building
+            concatEvents(ret, b.activate(this));
+        }
+        return ret;
+    }
+    spawnUnit(unit: UnitStats, x:number, y:number, owner: PlayerId): Unit | null {
+        if (!this.field[x][y].occupant) {
+            this.field[x][y].occupy([x, y], "unit");
+            this.getPlayer(owner).playerInfo.units.push([x, y]);
+            const u = new Unit([x, y], unit, owner);
+            this.units.push(u);
+            return u;
+        } else {
             return null;
         }
     }
 
     // Verifies if a building can be placed at the specified location
-    verifyPlacement(size: number, x: number, y: number):boolean {
-        if (x < 0 || y < 0 || x + size > this.fieldSize || y + size > this.fieldSize) { return false;}
-        if (x % 1 !== 0 || y % 1 !== 0) {return false;}
+    verifyPlacement(size: number, x: number, y: number): boolean {
+        // Assumes square field
+        if (!isIntInRange(x, 0, this.fieldSize - size) || !isIntInRange(y, 0, this.fieldSize - size)) return false;
         
         let valid = true;
         const obj = this;
         doubleIt((i, j)=>{
-            if (obj.field[i][j].occupied) valid = false;
+            if (obj.field[i][j].occupant) valid = false;
         }, x, y, x+size, y+size);
         return valid;
     }
 
-    endTurn() {
+    endTurn(): PlayerArr<SocketEvent[]> {
+        /*// Clear timer
+        clearTimeout(this.timerID);*/
+
+        const ret = emptyPArr<SocketEvent>();
+
         // Activate end of turn effects, as applicable
-        this.players[this.turn].forEach(p=>p.playerInfo!.buildings.forEach(b=>b.endTurn())); // Assumes playerInfo is not null
+        this.buildings.forEach(b=>concatEvents(ret, b.endTurn(this)));
+        this.units.forEach(u=>concatEvents(ret, u.endTurn()));
         this.turn = 1 - this.turn;
-        // call startTurn() here?
+
+        return ret;
+        // Turn start needs to be called separately
     }
 
-    startTurn() {
+    startTurn(): PlayerArr<SocketEvent[]> {
+        const ret = emptyPArr<SocketEvent>();
+
         // Activate start of turn effects, as applicable
-        // Generate energy
-        // Deactivate buildings?
-        // Generate money and other effects
-        // TODO
-        this.players[this.turn].forEach(p=>p.playerInfo!.buildings.forEach(b=>b.startTurn())); // Assumes playerInfo is not null
-        // Start timer?
+        this.buildings.forEach(b=>concatEvents(ret, b.startTurn(this)));
+        this.units.forEach(u=>concatEvents(ret, u.startTurn()));
+
+        // Players draw a card at the start of their turn
+        this.players[this.turn].forEach(p => concatEvents(ret, p.playerInfo.draw()));
+
+        // Reset the team's turnEnd status
+        this.turnEnd[this.turn] = this.players[this.turn].map(p=>!(p.playerInfo.active && p.status === PlayerStatus.Active));
+
+        /*// Start timer
+        this.timerID = setTimeout(()=> this.endTurn(), TURN_LENGTH);*/
+
+        return ret;
     }
 
-    // Returns a copy of the game with player socketIds replaced by clientIds
-    /*clientCopy() {
-        const game = new Game();
-        game.players = this.players; //FIX TO BE DEEP COPY
-        game.turn = this.turn;
-        game.id = this.id;
-        game.field = this.field;
-        return game;
-    }*/
-}
-
-class PlayerInfo {
-    private cards: Card[] = [];
-    private deck: Deck = new Deck;
-    public buildings: Building[] = [];
-    private units: Unit[] = [];
-    public money = 0;
-    public energy = 0; // Current energy output
-    constructor() {
-
-    }
-    // Deactivates buildings until energy is nonnegative
-    upkeep() {
-        let i = this.buildings.length;
-        while (this.energy < 0) {
-            if (this.buildings[--i].stats.upkeep > 0) {
-                this.buildings[i].deactivate();
-            }
+    // Ends a player's turn and returns whether or not the entire turn can be ended
+    changeEndStatus(player: PlayerId, status: boolean): boolean {
+        if (player.every(x => isIntInRange(x, 0, 1)) && this.getPlayer(player).team === this.turn) {
+            this.turnEnd[player[0]][player[1]] = status;
+            return status && this.turnEnd[player[0]][1-player[1]];
         }
+        return false;
     }
-}
 
-class Card {
-    private name: string
-    private type: CardType
-    constructor(name: string, type: CardType) {
-        this.name = name;
-        this.type = type;
+    getPlayer(c: PlayerId) {
+        return this.players[c[0]][c[1]];
     }
-}
-
-class Deck {
-    // TODO
-    private cards: Card[] = [];
-    private size = 0; // Is this needed?
-    constructor() {
-        // Maybe add some stuff later
+    // Oh no, code duplication!?!
+    getTile(c: Coordinate) {
+        return this.field[c[0]][c[1]];
     }
-    shuffle() {
-        let temp = -1;
-        for (let i = 0; i < this.size - 1; i++) {
-            temp = i + Math.floor((this.size - i) * Math.random());
-            [this.cards[i], this.cards[temp]] = [this.cards[temp], this.cards[i]];
+    getBuilding(c: Coordinate) {
+        return this.buildings.find(b => arrEqual(b.loc, c));
+    }
+    getUnit(c: Coordinate) {
+        return this.units.find(u => arrEqual(u.loc, c));
+    }
+    // Versatile but painful to use due to typing
+    get(c: Coordinate | PlayerId, type: "unit" | "building" | "tile" | "player" | null) {
+        if (type === "unit" || type === "building") return this[type + "s" as "units" | "buildings"].find(x => arrEqual(x.loc, c));
+        else if (type === "tile" || type === "player") return this[type === "tile" ? "field" : "players"][c[0]][c[1]];
+        else return null;
+    }
+    getOccupant(c: Coordinate) {
+        return this.get(c, this.getTile(c).occupantType) as Building | Unit | null | undefined;
+    }
+    // Returns a ClientGameState for the specified client, if any
+    clientCopy(player?: PlayerId): ClientGameState {
+        return {
+            turn: this.turn,
+            field: this.field,
+            fieldSize: this.fieldSize,
+            players: this.players.map(team=>team.map(p=>({
+                id: socketTable[p.id].clientId,
+                name: p.name,
+                faction: p.faction,
+                team: p.team,
+                playerInfo: p.playerInfo.clientCopy(player)
+            }))),
+            buildings: this.buildings,
+            units: this.units
+        };
+    }
+    
+    /* 
+     * Returns whether or not there is line of sight between the source and the target.
+     * Source and Target do not block line of sight
+     * Currently, all buildings and units block line of sight
+     * Corners require two squares of the corner to be blocked to block line of sight
+     */
+    sight(source: Coordinate, target: Coordinate): boolean {
+        const dx = Math.abs(target[0] - source[0]);
+        const dy = Math.abs(target[1] - source[1]);
+        const xdir = target[0] - source[0] > 0 ? 1 : -1; // Assumes this won't be used if it is 0
+        const ydir = target[1] - source[1] > 0 ? 1 : -1; // Assumes this won't be used if it is 0
+        const right = [];
+        for (let x = 0.5; x < dx; x++) {
+            right.push(x * dy / dx);
         }
-    }
-    add(cardName: string, cardType: CardType, quantity: number) {
-        // Update parameters later as card constructor changes
-        for (let i = 0; i < quantity; i++) {this.cards.push(new Card(cardName, cardType));}
-        this.size += quantity;
-    }
-    draw() {
-        // TODO: Decide on a draw algorithm
-        // Temporarily, we'll use each card has twice the chance of being drawn as the previous card except the last two
+        const up = [];
+        for (let y = 0.5; y < dy; y++) {
+            up.push(y);
+        }
         let i = 0;
-        let choice = Math.random();
-        while(choice < 0.5 && ++i < this.size - 1) {
-            choice *= 2;
+        let j = 0;
+        let [x, y] = source;
+        let valid = true;
+        const check = () => {if (this.field[x][y].occupant && (x !== target[0] || y !== target[1])) valid = false;};
+        const goHori = () => { x += xdir; i++};
+        const goVert = () => { y += ydir; j++};
+        while (i < right.length || j < up.length) {
+            if (i === right.length) goVert();
+            else if (j === up.length) goHori();
+            else if (right[i] < up[j]) goHori();
+            else if (right[i] > up[j]) goVert();
+            else { // Corner
+                if (this.field[x+xdir][y].occupant && this.field[x][y+ydir].occupant) valid = false;
+                x += xdir;
+                y += ydir;
+                i++;
+                j++;
+            }
+            check();
         }
-        this.size--;
-        return this.cards.splice(i, 1)[0];
+        return valid;
+    }
+
+    move(player: PlayerId, unit: Coordinate, steps: Coordinate[]): PlayerArr<SocketEvent[]> {
+        const p = this.getPlayer(player);
+        const u = this.getUnit(unit);
+        if (!p || p.team !== this.turn || !p.playerInfo.active) return emptyPArr(); // Not a player or not their turn
+        if (!u || !arrEqual(u.owner, player)) return emptyPArr(); // Not a valid unit or not their unit
+        if (steps.some(s => !s.every(x => isIntInRange(x, 0, this.fieldSize - 1)))) return emptyPArr(); // Invalid coordinate
+        return u.move(this, steps);
+    }
+
+    attack(player: PlayerId, source: Coordinate, target: Coordinate): Events {
+        const p = this.getPlayer(player);
+        const o = this.getOccupant(source);
+        if (!p || p.team !== this.turn || !p.playerInfo.active) return emptyPArr();
+        if (!o || !arrEqual(o.owner, player)) return emptyPArr();
+        if (arrEqual(source, target) || !target.every(x => isIntInRange(x, 0, this.fieldSize - 1))) return emptyPArr(); // Invalid target coordinate
+        return o.attack(this, target);
     }
 }
 
 class Tile {
     // private terrain; // To be implemented later?
-    public building: Building | null = null;
-    public unit: Unit | null = null;
-    public occupied = false; // Equivalent to building or unit not null
-    build(b: Building) {
-        this.building = b;
-        this.occupied = true;
+    // public loc: [number, number]; // Don't need that
+    public occupant: Coordinate | null = null; // Coordinate of occupant or null if unoccupied
+    public occupantType: "unit" | "building" | null = null;
+    // For fog of war:
+    // public views: [[number, number], [number, number]]; // Each number represents the number of units viewing the tile for that player
+    constructor() {
+        // If needed?
+    }
+    occupy(occupant: Coordinate, occupantType: "unit" | "building") {
+        this.occupant = occupant;
+        this.occupantType = occupantType;
+    }
+    leave() {
+        this.occupant = null;
+        this.occupantType = null;
     }
 }
 
-function doubleIt(f: (i: number, j: number)=>void, x:number, y:number, xEnd:number, yEnd:number) {
-    for (let i = x; i < xEnd; i++) {
-        for (let j = y; j < yEnd; j++) {
-            f(i, j);
+/*// Returns array of all tiles that are within a given radius of a coordinate
+// Coordinate should have integer values, and radius should be nonnegative
+function withinRadius(c: Coordinate, r: number): Coordinate[] {
+    const result: Coordinate[] = [];
+    const maxY = Math.floor(r);
+    for (let y = maxY; y >= -maxY; y--) {
+        let maxX = Math.floor(Math.sqrt(r**2 - y**2));
+        for (let x = maxX; x >= -maxX; x--) {
+            result.push([c[0] + x, c[1] + y])
         }
     }
-}
-
-
-type UnitStats  = {
-    // Contains the stats of a unit
-    maxHealth: number;
-    damage: number; // Attack damage
-    speed: number;
-    range: number; // 1 = melee
-    attributes: string[]; // Could potentially make a new type or enum for this
-    // Possibly add methods for getting and changing stats
-    // Possibly add methods for taking damage, dying, and other actions
-}
-
-class Unit {
-    private tile: Tile;
-    private stats: UnitStats;
-    private owner: Player;
-    private health: number; // Current health
-    // Add team and/or faction property?
-    constructor(tile: Tile, stats: UnitStats, player: Player) {
-        this.tile = tile;
-        this.stats = stats;
-        this.owner = player;
-        this.health = stats.maxHealth;
-    }
-}
-
-type BuildingStats  = {
-    maxHealth: number;
-    damage: number; // Attack damage, 0 for doesn't attack?
-    range: number; // 0 for doesn't attack normally?
-    upkeep: number; // amount of energy required for upkeep
-    moneyGen: number; // Money generated at the start of each turn
-    energyGen: number; // Energy generated at the start of each turn
-    buildTime: number; 
-    size: number; // Buildings are assumed to be square
-    attributes: string[];
-}
-
-class Building {
-    private tiles: Tile[];
-    public stats: BuildingStats;
-    private owner: Player;
-    private health: number; // Current health
-    private buildLeft: number; // Turns left for buildTime
-    private active: boolean; // Whether the building is active or inactive (disactivated)
-    constructor(tiles: Tile[], stats: BuildingStats, player: Player) {
-        this.tiles = tiles;
-        this.stats = stats;
-        this.owner = player;
-        this.health = stats.maxHealth;
-        this.buildLeft = stats.buildTime;
-        this.active = this.buildLeft === 0;
-        if (this.active && stats.energyGen > 0) {player.playerInfo!.energy += stats.energyGen;}
-    }
-    endTurn() {
-        // Decrement construction time
-        if (this.buildLeft > 0) {
-            /*if(--this.buildLeft === 0 && this.owner.playerInfo!.energy >= this.stats.upkeep) {
-                this.owner.playerInfo!.energy -= this.stats.upkeep;
-                this.active = true;
-            }*/
-            this.buildLeft--;
-            this.activate();
-        }
-        // Maybe more stuff here, as applicable
-    }
-    startTurn() {
-        // Generate, if active
-        // TODO
-    }
-    // Returns whether or not it is active
-    activate(): boolean {
-        if (!this.active && this.buildLeft === 0 && this.stats.upkeep <= this.owner.playerInfo!.energy) {
-            this.owner.playerInfo!.energy += this.stats.energyGen - this.stats.upkeep;
-            this.active = true;
-        }
-        return this.active;
-    }
-    deactivate() {
-        if (this.active) {
-            this.owner.playerInfo!.energy -= this.stats.energyGen - this.stats.upkeep;
-            this.active = false;
-        }
-    }
-}
-
-export { GameInfo, PlayerInfo } // Card, Tile, Field, UnitStats, BuildingStats, Unit, Building
+    return result;
+}*/

@@ -1,26 +1,29 @@
 Server Side Events:
+disconnect (automatic event: client has disconnected)
 create-game (from the menu, send name)
 join-game (from the menu, send name and lobby id)
 change-team (inside the lobby)
 change-faction (inside the lobby, send faction)
-start game
+start-game (inside the lobby, host only)
+change-end-status (in game, ends/unends your turn, send true for end and false for unend)
+move-unit (in game, send unit Coordinate and steps array)
+attack (in game, send source and target Coordinates)
+
 play card (subcases: operation, building a building, deploying a unit)
-move unit
-attack w/ unit
 activate unit
-end turn
-disconnect
 chat msg (later)
 
 Client Side Events:
 id (sends clientId on connection)
 dup-id (on connection, your socketId is already taken, please refresh your page to try again)
+state-error (invalid state for the event you sent)
 created-lobby (gives filtered lobby, tells client they have created a lobby)
 create-error (tells client they have an error in creating a game)
 lobby-join-result (gives boolean indicating success and either filtered lobby or error message)
-new-join (gives name and clientId, tells client that a new player joined their lobby)
+join-error (happens when name is invalid, should not happen from regular client use)
+new-join (gives name clientId, faction, and team, tells client that a new player joined their lobby)
 player-left-lobby (gives clientId, tells client that a player left their lobby)
-team-change-error (tells client they are not in the right state to change teams)
+player-left-game (gives clientId, tells client that player left their in progress game)
 team-change-success (gives new team, tells client they have successfully changed teams)
 team-change (gives clientId and new team, tells client other client in lobby has changed teams)
 faction-change-error (gives error, tells client error in changing faction)
@@ -28,3 +31,19 @@ faction-change-success (gives new faction, tells client they have successfully c
 faction-change (gives clientId and new faction, tells client other client in lobby has changed factions)
 game-start-error (gives error, tells client error in starting game)
 game-start (gives game, tells client game has started)
+move (gives original loc, new loc, tells client thing (usually a unit) at original loc moved to new loc)
+change-money (gives PlayerId, amount, tells client change in a player's money amount)
+change-energy (gives PlayerId, amount, tells client change in a player's energy amount)
+change-tot-energy (gives PlayerId, amount, tells client change in a player's total energy amount)
+building-activated (gives building Coordinate, tells client building has been activated)
+building-deactivated (gives building Coordinate, tells client building has been activated)
+build-tick (gives building Coordinate, amount, tells client building has ticked by that amount)
+card-drawn (gives PlayerId, and potentially a Card, tells client specified player has drawn a card. Only the player recieves the actual card info)
+card-discarded (gives PlayerId and index, tells client specified player has discarded that card in their hand)
+building-spawn (gives PlayerId and building Coordinate, tells client specified has spawned a building)
+took-damage (gives Coordinate and damage amount, tells client thing at that Coordinate took damage)
+death (gives Coordinate, tells client thing at that Coordinate died)
+hq-death (gives PlayerId, tells client Player's HQ was destroyed)
+attack (gives source and target Coordinate, tells client source attacked target)
+game-end (gives winning team, tells client game has ended)
+turn-status-change (gives PlayerId, true/false, tells client player readied/unreadied for end turn)

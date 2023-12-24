@@ -1,23 +1,35 @@
 Classes and types
 Lobby (type):
-- manages information about sockets, teams, factions pre-game
-Game:
-- manages information about sockets, teams, factions
+- manages information about players
+- has a unique id
+- possibly contains a GameState
+GameState:
+- manages pretty much everything about the game
+- keeps master arrays of buildings and units
 - tracks data about turns, Players, the battlefield of tiles
-- turn timer
+- is used by other classes to start/end turns as well as get information about other parts of the game
+- is called to manage movement, attacks, and ability activations
+- *does not manage turn timer! This should be managed by index.ts!
 Tile:
 - terrain type
-- covered by building (reference to building, undefined=false)
+- occupant reference (through Coordinate) and occupant type (building/unit)
 
 Player:
 - socket id
 - faction and team
+- name
+- connected status
+- PlayerInfo for other game-relevant information
+PlayerInfo:
 - energy and money
 - building ownership (array)
 - unit ownership (array)
-- card ownership
+- hand (array)
+- deck
+- Called to draw, discard, and play cards
+- Called for building upkeep (make sure buildings are not using more energy than available)
 Card
-- OperationCard, UnitCard, BuildingCard subclasses
+- Contains basic info of a card
 Unit
 - HP, SPD, ATK, RAN (as base stats too)
 - passive abilities
@@ -29,12 +41,20 @@ type UnitType = {
 }
 type Unit = {
     type: UnitType
+    move()
+    attack()
+    takeDamge()
+    die()
+    ...
 }
 Building
 - similar to unit
 
 Game Flow
-Start game / Join Game > Choose factions & teams > Game starts automatically
+[Menu] > Start game / Join Game > 
+[Lobby] > Choose factions & teams > Host starts game > 
+[Game] > Play game > Game ends > 
+[GameEnd] > Goto Menu / Goto Lobby / View GameState
 
 Game mechanics
  - Turn end: All of your buildings get -1 building cooldown
@@ -46,4 +66,47 @@ Energy Implementation
  - When a building generates or stops generating energy, the user's energy property is changed accordingly
  - If the user's energy output is ever less than energy usage, their buildings will be deactivated in order of last built
 
+Units
+ - Movement
+    - Each unit may be commanded to move once per turn and attack once per turn (unless otherwise specified)
+    - The client will send the server an array of steps as a move
+    - If a step causes a unit to detect an invisible unit, the unit stops and may be commanded to move again
+    - Speed is the number of steps a unit can take each turn. Detecting an invisible unit does not replenish this.
+    - Units move taxicab-wise. That is to say, they can move up, down, left, right but not diagonally.
+ - Range
+    - Unit range uses euclidean distance, from the center of their tile to the center of the target tile
+    - Melee units have range 1 or 1.5, depending on whether or not they can target diagonally.
+ - Line-of-sight
+    - Units and buildings block line of sight. In the future, some terrain might also do so.
+    - Draw line from center of source tile to center of target tile. If the line intersects
+      any square that blocks line of sight, then line of sight is blocked.
+       - If the line passes through a corner, then the corner must be blocked on both sides
+         in order to block line of sight.
+ - Sight (for purposes of fog of war, which is not currently implemented)
+    - Uses euclidean distance & line of sight
+ - Attacking
+    - Non-splash attacks may not target empty tiles
+    - Units may not target themselves with their own attacks
+    - Currently, friendly fire is otherwise permitted
+
+Cards
+ - Players start the game with 5 Cards
+ - Players draw 1 card per turn
+ - If the deck is empty when a draw is attempted, the draw just fails (no card is drawn)
+ - *Above card rules are liable to change
+
+Spawning
+ - Buildings are spawned adjacent (not diagonal) to a unit
+ - At the end of your turn, each adjacent unit contributes 1 to building construction
+ - Building health starts at 1/(x+1) when placed and gains 1/(x+1) per build tick, where x is total build ticks needed
+ - Units can be spawned within distance of 2 of a building (or just HQ?)
+ - Units spawn with no attacks and moves left
+ - *Playtesting required to finalize above rules
+
+Win Condition
+ - When a player's headquarters is destroyed, they lose the ability to play cards and command their units and buildings
+ - When a team loses all of their headquarters, they lose and the other team wins
+
  Note: It is difficult to send functions over sockets. Do not have a loop with objects that reference each other.
+ In order to facilitate that, we are removing circular and duplicate references within Players and GameStates.
+ When storing or sending a game, we ignore the Game class and instead just serialize the GameState class.

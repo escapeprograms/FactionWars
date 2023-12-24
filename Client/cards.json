@@ -1,0 +1,90 @@
+{
+    "template-of-operation": {
+        "name":"template | order card entries by faction, then name",
+        "faction": "N",
+        "cardType": "U or B or O",
+        "cost": 0,
+        "targets": [
+            {
+                "name": "$var",
+                "type": "tile",
+                "properties": {
+                    "unoccupied": true,
+                    "next-to-building": true,
+                    "with-health-at-least": 5,
+                    "circle": 3
+                }
+            },
+            {
+                "name": "$annoyance",
+                "type": "choice",
+                "properties": {
+                    "choices": ["choice1", "choice2", "choice3"]
+                }
+            }
+        ],
+        "effects": [{
+            "effect": "spawn",
+            "type": "unit",
+            "id": "footsoldier",
+            "loc": "$var"
+        }]
+    },
+
+    "power plant": {
+        "name": "Power Plant",
+        "faction": "N",
+        "cardType": "B",
+        "cost": 2,
+        "targets": [{"name": "$loc", "type": "tile", "properties": {"buildable": true}}],
+        "effects": [{
+            "effect": "spawn",
+            "type": "building",
+            "id": "power plant",
+            "loc": "$var"
+        }]
+    },
+
+    "bank": {
+        "name": "Bank",
+        "faction": "N",
+        "cardType": "B",
+        "cost": 2,
+        "targets": [{"name": "$loc", "type": "tile", "properties": {"buildable": true}}],
+        "effects": [{
+            "effect": "spawn",
+            "type": "building",
+            "id": "bank",
+            "loc": "$var"
+        }]
+    },
+
+    "footsoldier": {
+        "name": "Footsoldier",
+        "faction": "N",
+        "cardType": "U",
+        "cost": 1,
+        "targets": [{"name": "$loc", "type": "tile", "properties": {"next-to-hq": true}}],
+        "effects": [{
+            "effect": "spawn",
+            "type": "unit",
+            "id": "footsoldier",
+            "loc": "$var"
+        }]
+    },
+
+    "war funds": {
+        "name": "War Funds",
+        "faction": "N",
+        "cardType": "O",
+        "cost": 0,
+        "targets": [],
+        "effects": [{
+            "effect": "gain",
+            "type": "money",
+            "quantity": 3,
+            "target": "self"
+        }]
+    }
+
+}
