@@ -1,8 +1,6 @@
 import { isValidName } from "./functions.js";
 
-// temporary
-let io: any;
-
+declare const io: any;
 const socket = io();
 
 let myId: string;
