@@ -6,6 +6,7 @@ export {Unit, UnitStats};
 
 type UnitStats  = {
     // Contains the stats of a unit
+    name: string;
     maxHealth: number;
     damage: number; // Attack damage
     speed: number;

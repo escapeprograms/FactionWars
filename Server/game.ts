@@ -10,8 +10,8 @@ import c from "./../Client/cards.json" assert {type: "json"};
 
 export { GameState, Tile, buildings, units, cards }; // Tile, Field
 
-const buildings = b as {[key: string]: BuildingStats}; // To establish type
-const units = u as {[key: string]: UnitStats};
+const buildings = b as {[key: string]: BuildingStats & {faction: Faction}}; // To establish type
+const units = u as {[key: string]: UnitStats & {faction: Faction}};
 const cards = c as {[key: string]: Card};
 
 class GameState {
