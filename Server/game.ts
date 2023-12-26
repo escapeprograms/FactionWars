@@ -41,7 +41,7 @@ class GameState {
         // Currently assuming square fields only
         // Create field
         for (let i = 0; i < size; i++) {
-            const row = [];
+            const row: Tile[] = [];
             for (let j = 0; j < size; j++) {
                 row.push(new Tile());
             }
@@ -209,11 +209,11 @@ class GameState {
         const dy = Math.abs(target[1] - source[1]);
         const xdir = target[0] - source[0] > 0 ? 1 : -1; // Assumes this won't be used if it is 0
         const ydir = target[1] - source[1] > 0 ? 1 : -1; // Assumes this won't be used if it is 0
-        const right = [];
+        const right: number[] = [];
         for (let x = 0.5; x < dx; x++) {
             right.push(x * dy / dx);
         }
-        const up = [];
+        const up: number[] = [];
         for (let y = 0.5; y < dy; y++) {
             up.push(y);
         }
