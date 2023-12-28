@@ -84,22 +84,22 @@ class GameState {
             this.getPlayer(owner).playerInfo.buildings.push([x, y]); // Assumes playerinfo is not null
             const b = new Building(this, [x, y], building, owner);
             this.buildings.push(b);
-            doubleIt((i, j) => ret[i][j].push({event: "building-spawn", params: [[...owner], [x, y]]}), 0, 0, 2, 2);
+            doubleIt((i, j) => ret[i][j].push({event: "building-spawn", params: [[...owner], [x, y], b]}), 0, 0, 2, 2);
             // Attempt to activate building
             concatEvents(ret, b.activate(this));
         }
         return ret;
     }
-    spawnUnit(unit: UnitStats, x:number, y:number, owner: PlayerId): Unit | null {
+    spawnUnit(unit: UnitStats, x:number, y:number, owner: PlayerId): Events {
+        const ret = emptyPArr<SocketEvent>();
         if (!this.field[x][y].occupant) {
             this.field[x][y].occupy([x, y], "unit");
             this.getPlayer(owner).playerInfo.units.push([x, y]);
             const u = new Unit([x, y], unit, owner);
             this.units.push(u);
-            return u;
-        } else {
-            return null;
+            doubleIt((i, j) => ret[i][j].push({event: "unit-spawn", params: [[...owner], [x, y], u]}), 0, 0, 2, 2);
         }
+        return ret;
     }
 
     // Verifies if a building can be placed at the specified location
