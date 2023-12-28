@@ -2,14 +2,14 @@ import { MAX_NAME_SIZE } from "./constants.js";
 
 // Validates an input name
 // Currently, only specifications is that the type is a string and name is not empty but also not too long.
-export function isValidName(name) {
+export function isValidName(name: string) {
     return typeof name === "string" && name.length > 0 && name.length <= MAX_NAME_SIZE;
 }
 
 // Returns array of all tiles that are within a given radius of a coordinate
 // Coordinate should have integer values, and radius should be nonnegative
 // minX, minY, maxX, maxY are optional parameters that can be given to filter results
-export function withinRadiusInBounds(c, r, minX = -Infinity, minY = -Infinity, maxX = Infinity, maxY = Infinity){
+export function withinRadiusInBounds(c: [number, number], r: number, minX = -Infinity, minY = -Infinity, maxX = Infinity, maxY = Infinity) {
     const result = [];
     const dy = Math.floor(r);
     const minDy = Math.max(minY - c[1], -dy);

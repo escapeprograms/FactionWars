@@ -10,7 +10,7 @@ import { createLobby, joinLobby, filterLobby, lobbyTable, verifyLobby } from "./
 import { SocketState, Faction, Lobby, ActiveLobby, Player, SocketInfo, GameState, PlayerInfo, PlayerArr, SocketEvent, PlayerStatus, SocketInfoLobby, PlayerInGame, SocketInfoGame} from "./types.js";
 import { isCoord, doubleIt } from "./utility.js";
 
-const clientPath = path.resolve("Client")
+const clientPath = path.resolve("build/Client")
 console.log("Serving static from " + clientPath);
 
 const app = express();
