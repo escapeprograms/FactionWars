@@ -23,5 +23,18 @@
         "actives": [],
         "passives": [],
         "attributes": []
+    },
+
+    "prototype": {
+        "name": "The Prototype",
+        "faction": "A",
+        "maxHealth": 3,
+        "damage": 2,
+        "range": 4,
+        "splash": 0,
+        "speed": 3,
+        "actives": [],
+        "passives": [],
+        "attributes": []
     }
 }
