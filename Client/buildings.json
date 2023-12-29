@@ -43,7 +43,7 @@
         "upkeep": 2,
         "moneyGen": 1,
         "energyGen": 0,
-        "buildTime": 0,
+        "buildTime": 2,
         "size": 2,
         "actives": [],
         "passives": [],
@@ -60,7 +60,7 @@
         "upkeep": 0,
         "moneyGen": 0,
         "energyGen": 6,
-        "buildTime": 0,
+        "buildTime": 2,
         "size": 2,
         "actives": [],
         "passives": [],
@@ -82,5 +82,22 @@
         "actives": [],
         "passives": [],
         "attributes": ["wall"]
+    },
+
+    "sentry turret": {
+        "name":"Sentry Turret",
+        "faction": "M",
+        "maxHealth": 30,
+        "damage": 5,
+        "splash": 0.5,
+        "range": 15,
+        "upkeep": 2,
+        "moneyGen": 0,
+        "energyGen": 6,
+        "buildTime": 3,
+        "size": 2,
+        "actives": [],
+        "passives": [],
+        "attributes": []
     }
 }
