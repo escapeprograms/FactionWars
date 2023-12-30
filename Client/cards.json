@@ -41,7 +41,7 @@
             "effect": "spawn",
             "type": "building",
             "id": "power plant",
-            "loc": "$var"
+            "loc": "$loc"
         }]
     },
 
@@ -55,7 +55,7 @@
             "effect": "spawn",
             "type": "building",
             "id": "bank",
-            "loc": "$var"
+            "loc": "$loc"
         }]
     },
 
@@ -69,7 +69,7 @@
             "effect": "spawn",
             "type": "unit",
             "id": "footsoldier",
-            "loc": "$var"
+            "loc": "$loc"
         }]
     },
 
