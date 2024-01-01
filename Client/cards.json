@@ -2,7 +2,7 @@
     "template-of-operation": {
         "name":"template | order card entries by faction, then name",
         "faction": "N",
-        "cardType": "U or B or O",
+        "cardType": "O",
         "cost": 0,
         "targets": [
             {
@@ -25,7 +25,7 @@
         ],
         "effects": [{
             "effect": "spawn",
-            "type": "unit",
+            "type": "U",
             "id": "footsoldier",
             "loc": "$var"
         }]
@@ -39,7 +39,7 @@
         "targets": [{"name": "$loc", "type": "tile", "properties": {"buildable": true}}],
         "effects": [{
             "effect": "spawn",
-            "type": "building",
+            "type": "B",
             "id": "power plant",
             "loc": "$loc"
         }]
@@ -53,10 +53,15 @@
         "targets": [{"name": "$loc", "type": "tile", "properties": {"buildable": true}}],
         "effects": [{
             "effect": "spawn",
-            "type": "building",
+            "type": "B",
             "id": "bank",
             "loc": "$loc"
         }]
+    },
+
+    "sentry turret": {
+        "cost": 4,
+        "cardType": "B"
     },
 
     "footsoldier": {
@@ -64,13 +69,23 @@
         "faction": "N",
         "cardType": "U",
         "cost": 1,
-        "targets": [{"name": "$loc", "type": "tile", "properties": {"next-to-hq": true}}],
+        "targets": [{"name": "$loc", "type": "tile", "properties": {"spawnable": true}}],
         "effects": [{
             "effect": "spawn",
-            "type": "unit",
+            "type": "U",
             "id": "footsoldier",
             "loc": "$loc"
         }]
+    },
+
+    "prototype": {
+        "cost": 3,
+        "cardType": "U",
+        "effects": [
+            {"effect": "spawn", "type": "U", "id": "prototype", "loc": "$loc"}, 
+            {"effect": "modify", "modification": "change", "on": 0, "type": "attack", "amount": 1},
+            {"effect": "modify", "modification": "change", "on": 0, "type": "health", "amount": 1}
+        ]
     },
 
     "war funds": {

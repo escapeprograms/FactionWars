@@ -1,36 +1,10 @@
-import { CardType, Faction } from "./types.js"
-import { deepCopy } from "./utility.js"
+import { BuildingStats, CardType, Coordinate, Events, Faction, GameState, PlayerArr, PlayerId, SocketEvent, UnitStats, emptyPArr } from "../Server/types.js";
+import { buildings, units } from "../Server/types.js";
+import { arrEqual, concatEvents, deepCopy, doubleIt, isCoord, isIntInRange } from "../Server/utility.js";
 
-export { Card, Deck };
+import c from "./../Client/cards.json" assert {type: "json"};
 
-type Card = {
-    name: string, // internal identifier
-    faction: Faction | "N", // Faction this belongs to, or "N" for Neutral
-    cardType: CardType // Building | Unit | Operation
-    cost: number, // cost in money
-    targets: {
-        name: string, // beginning with $
-        type: string, // tile/unit/building/player/card etc.
-        properties: {
-            [key: string]: any
-        }
-    }[]
-    effects: {
-        effect: string // name of the type of effect
-        [key: string]: any
-    }[]
-    /* Sample effect entry:
-    {
-        effect: spawn
-        id: string,
-        loc: string,
-        modifiers: {
-            [key: string]: any
-        }[]
-    }
-    */
-    
-}
+export { Card, Deck, play};
 
 class Deck {
     private cards: Card[] = [];
@@ -66,4 +40,214 @@ class Deck {
         this.size--;
         return this.cards.splice(i, 1)[0];
     }
+}
+
+// Process import
+type Target = {
+    name: string, // beginning with $
+    type: string, // tile/unit/building/player/card etc.
+    properties: {
+        [key: string]: any
+    }
+}
+
+type Effect = {
+    effect: string, // name of the type of effect
+    modifiers: {[key: string]: any},
+    [key: string]: any
+}
+
+type JsonEffect = {
+    effect: string,
+    modifiers?: {[key: string]: any},
+    [key: string]: any
+}
+
+interface SpawnCard {
+    id?: string;
+    name?: string;
+    faction?: Faction | "N";
+    cardType: CardType.Building | CardType.Unit;
+    cost: number;
+    targets?: Target[];
+    effects?: JsonEffect[];
+    onDiscard?: Effect;
+}
+
+interface OpCard {
+    id?: string;
+    name: string,
+    faction: Faction | "N",
+    cardType: CardType.Operation,
+    cost: number,
+    targets: Target[],
+    effects: JsonEffect[],
+    onDiscard?: Effect
+}
+
+type JsonCard = SpawnCard | OpCard
+
+const tempCards: {[key: string]: JsonCard} = c as {[key: string]: JsonCard};
+
+// Add in default properties
+for (let key in tempCards) {
+    const card = tempCards[key];
+    const type = tempCards[key].cardType;
+    if (!card["id"]) card["id"] = key;
+    if (type === "B" || type === "U") {
+        const db = type === "B" ? buildings : units;
+        if (!card["name"]) card["name"] = db[key]["name"];
+        if (!card["faction"]) card["faction"] = db[key]["faction"];
+        if (!card["effects"]) card["effects"] = [{"effect": "spawn", "type": type, "id": key, "loc": "$loc"}];
+        if (!card["targets"]) card["targets"] = [{"name": "$loc", "type": "tile", "properties": {[type === "B" ? "buildable" : "spawnable"]: true}}];
+    }
+    for (let effect of card.effects!) {
+        if (!("modifiers" in effect)) effect.modifiers = {};
+    }
+}
+export const cards = tempCards as {[key: string]: Card};
+
+interface Card {
+    id: string, // internal identifier, same as key in cards object
+    name: string, // external name for card
+    faction: Faction | "N", // Faction this belongs to, or "N" for Neutral
+    cardType: CardType // Building | Unit | Operation
+    cost: number, // cost in money
+    targets: Target[],
+    effects: Effect[],
+    onDiscard?: Effect
+}
+/*
+
+const cards = {
+    "bank": () => mkSpawner("bank", 2, "Building"),
+    "power plant": () => mkSpawner("power plant", 2, "Building"),
+    "sentry turret": () => mkSpawner("sentry turret", 4, "Building"),
+    "prototype": () => {const p = mkSpawner("prototype", 3, "Unit"); p.effects.push(() => {
+        "damage" in p.modifiers ? p.modifiers.damage!++ : p.modifiers.damage = 1;
+        "health" in p.modifiers ? p.modifiers.health!++ : p.modifiers.health = 1;
+        return emptyPArr();
+    }); return p;},
+    "war funds": () => ({
+        "name": "War Funds",
+        "faction": "N", // Faction this belongs to, or "N" for Neutral
+        "cardType": CardType.Operation,
+        "cost": 0, 
+        "targets": [],
+        "effects": [((game: GameState, owner: PlayerId)=>{
+            game.getPlayer(owner).playerInfo.money += 3; 
+            const ret = emptyPArr(); doubleIt((i, j)=>ret[i][j].push({event: "change-money", params: [[...owner], 3]}), 0, 0, 2, 2); 
+            return ret;
+        })],
+        "modifiers": {}
+    })
+}*/
+
+// Does not check if it is the player's turn
+function play(game: GameState, owner: PlayerId, index: number, targets: {[key: string]: any}): Events {
+    const player = game.getPlayer(owner).playerInfo;
+    const card = player.cards[index];
+    const ret = emptyPArr<SocketEvent>();
+    // Validate targets && costs
+    if (card.cost <= player.money && 
+        card.targets.every(t => validateTarget[t.type](game, targets[t.name], owner) && 
+        Object.keys(t.properties).every(p => validateProperties[p](game, targets[t.name], owner, t.properties[p])))) {
+        // Decrement money
+        if (card.cost !== 0) {
+            player.money -= card.cost;
+            doubleIt((i, j)=>ret[i][j].push({event: "change-money", params: [[...owner], -card.cost]}), 0, 0, 2, 2);
+        }
+        // Play effects
+        card.effects.forEach(e => concatEvents(ret, effects[e.effect](game, owner, card, replaceVars(e, targets))));
+        // Discard card
+        concatEvents(ret, player.discard(index)); // May need to modify later if we have onDiscard effects
+    }
+    return ret;
+}
+
+// Returns a copy of obj with all properties beginning with '$' replaced by the corresponding value in vars
+function replaceVars(obj: {[key: string]: any}, vars: {[key: string]: any}) {
+    const copy = {...obj};
+    for (let key in copy) {
+        const val  = obj[key];
+        if (typeof(val === "string") && val[0] === "$") copy[key] = vars[val];
+    }
+    return copy;
+}
+
+const effects: {[key: string]: (game: GameState, owner: PlayerId, card: Card, params: {[key: string]: any}) => Events} = {
+    "modify": (game, owner, card, params) => {
+        const ret = emptyPArr<SocketEvent>();
+        const effect = card.effects[params.on]; // Index of the effect
+        if (effect === undefined) return ret;
+        if (params.type in effect.modifiers) {
+            // Modification is either "set" or "change"
+            //params.modification === "set" ? effect.modifiers[params.type] = params.amount : effect.modifiers[params.type] += params.amount;
+            effect.modifiers[params.type] = params.amount + (params.modification === "change" ? effect.modifiers[params.type] : 0);
+        } else {
+            effect.modifiers[params.type] = params.amount;
+        }
+        return ret;
+    },
+    "gain": (game, owner, card, params) => {
+        // Assume gain is money for now
+        const ret = emptyPArr<SocketEvent>();
+        game.getPlayer(params.target).playerInfo.money += params.quantity
+        doubleIt((i, j)=>ret[i][j].push({event: "change-money", params: [[...params.target], params.quantity]}), 0, 0, 2, 2);
+        return ret; 
+    },
+    "spawn": (game: GameState, owner: PlayerId, card, params: {[key: string]: any}) => {
+        const type = params.type as string; // Building or Unit
+        const copy = deepCopy((type === "B" ? buildings : units)[params.id]);
+        if ("modifiers" in params) {
+            if ("damage" in params.modifiers) copy.damage += params.modifiers.damage;
+            if ("health" in params.modifiers) copy.maxHealth += params.modifiers.health;
+        }
+        return type === "B" ? game.spawnBuilding(copy as BuildingStats, params["loc"][0], params["loc"][1], owner) 
+            : game.spawnUnit(copy as UnitStats, params["loc"][0], params["loc"][1], owner);
+    },
+    
+}
+
+const validateTarget: {[key:string]: (game: GameState, target: any, owner: PlayerId) => boolean} = {
+    "tile": (game: GameState, target: any) => isCoord(target) && target.every((x: number) => isIntInRange(x, 0, game.fieldSize - 1)),
+    "unit": (game: GameState, target: any, owner) => validateTarget["tile"](game, target, owner) && game.getTile(target).occupantType === "unit",
+    "building": (game: GameState, target: any, owner) => validateTarget["tile"](game, target, owner) && game.getTile(target).occupantType === "building",
+    "player": (game: GameState, target: any) => isCoord(target) && target.every((x: number) => isIntInRange(x, 0, 1)),
+    "card": (game: GameState, target: any, owner: PlayerId) => typeof(target) === "object" && 
+        "player" in target && validateTarget["player"](game, target["player"], owner) && 
+        "index" in target && isIntInRange(target["index"], 0, game.getPlayer(target["player"]).playerInfo.cards.length - 1) 
+    // For a card, it should be an object: {player: PlayerId, index: number}
+};
+
+const validateProperties: {[key:string]: (game: GameState, target: any, owner: PlayerId, value: any) => boolean} = {
+    // For tiles only
+    "buildable": (game, target: Coordinate, owner, size: number) => {
+        if (typeof(size) !== "number" || !target.every((x: number)=>x+size<game.fieldSize)) return false;
+        // Ensure space is vacant
+        let valid = true;
+        doubleIt((i, j)=> {if(game.field[i][j].occupant) valid = false;}, target[0], target[1], target[0]+size, target[1]+size);
+        if (!valid) return false;
+        // Ensure building is next to a unit belonging to the player
+        adj(game, target, size).some(c => game.getTile(c)?.occupantType === "unit" && arrEqual(game.getUnit(c)!.owner, owner));
+        return valid;
+    },
+    "empty": (game, target) => game.getTile(target).occupant === null,
+    "spawnable": (game, target: Coordinate, owner) => !game.getTile(target).occupant && 
+        adj(game, target).some(c => game.getTile(c)?.occupantType === "building" && arrEqual(game.getBuilding(c)!.owner, owner)),
+}
+
+//const getTerms: {[key:string]: (game: GameState, target: any) => any}
+// target should be a valid Coordinate, length should be size of object in tiles-lengths
+function adj(game: GameState, target: Coordinate, length=1) {
+    const borders: Coordinate[] = [];
+    function getBorder(side: 0 | 1) {
+        for (let x = target[side]; x < target[side]+length; x++) {
+            if (target[1 - side] - 1 >= 0) borders.push([x, target[1 - side]-1]);
+            if (target[1 - side] + length < game.fieldSize) borders.push([x, target[1 - side] + length]);
+        }
+    }
+    getBorder(0);
+    getBorder(1);
+    return borders;
 }

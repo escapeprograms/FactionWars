@@ -1,4 +1,4 @@
-import { Coordinate, PlayerId, Events, SocketEvent, Player, Card, Deck, GameState, units, buildings, emptyPArr } from "./types.js";
+import { Coordinate, PlayerId, Events, SocketEvent, Card, Deck, GameState,emptyPArr, play } from "./types.js";
 import { arrEqual, concatEvents, doubleIt, isIntInRange } from "./utility.js";
 import { MAX_HAND_SIZE } from "../Client/constants.js";
 
@@ -51,49 +51,15 @@ export class PlayerInfo {
     }
     // Plays the card at the specified index
     // Returns true on success
-    play(game: GameState, index: number, targets: {[key: string]: any}): boolean {
-        const self = game.get(this.self, "player") as Player; //game.getPlayer(this.self);
-        let card: Card;
+    play(game: GameState, index: number, targets: {[key: string]: any}): Events {
+        //const self = game.get(this.self, "player") as Player; //
+        const self = game.getPlayer(this.self);
+        const ret = emptyPArr<SocketEvent>();
         // can only play on your turn and can only play cards that exist
-        if (game.turn !== self.team || !isIntInRange(index, 0, this.cards.length - 1)) return false;
-        card = this.cards[index];
-        // Check validity of targets && cost requirement
-        if (card.cost <= this.money && this.validTargets(game, card, targets)) {
-            this.money -= card.cost;
-            card.effects.forEach(e => {
-                switch(e.effect) {
-                    case "spawn":
-                        // Assumes e.loc is valid type, either variable or Coordinate (maybe improve later)
-                        const [x, y] = (typeof(e.loc) === "string" && e.loc[0] === "$") ? targets[e.loc] : e.loc;
-                        if (e.type === "unit") {
-                            game.spawnUnit(units[e.id], x, y, this.self);
-                            this.discard(index);
-                        } else if (e.type === "building") {
-                            game.spawnBuilding(buildings[e.id], x, y, this.self);
-                            this.discard(index); // Discard card after playing
-                        } else {
-                            console.log("Spawn type invalid.");
-                            throw new Error("Spawn type invalid");
-                        }
-                    case "gain":
-                        const player = e.target === "self" ? this : game.getPlayer(targets[e.target]).playerInfo!; // Assumes has to be self or variable
-                        if (e.type === "money") {
-                            player.money += e.quantity;
-                        } else {
-                            console.log("Gain type invalid.");
-                            throw new Error("Gain type invalid");
-                        } 
-                    default:
-                        console.log("Unknown effect: " + e.effect);
-                        throw new Error(`Effect type ${e.effect} not supported`);
-                }
-            });
-            return true;
-        } else {
-            // Targets invalid, cannot play
-            return false;
+        if (game.turn === self.team && isIntInRange(index, 0, this.cards.length - 1)) {
+            concatEvents(ret, play(game, this.self, index, targets));
         }
-
+        return ret;
     }
     // Checks validity of card targets
     validTargets(game: GameState, card: Card, targets: {[key: string]: any}): boolean {

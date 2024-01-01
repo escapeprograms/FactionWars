@@ -1,18 +1,16 @@
 import { CardType, Team, Coordinate, PlayerId, ClientGameState, Faction, PlayerArr, emptyPArr, SocketEvent, Events, PlayerStatus, PlayerInGame } from "./types.js";
-import { Building, BuildingStats, Unit, UnitStats, Card, Deck } from "./types.js";
+import { Building, BuildingStats, Unit, UnitStats, Card, Deck, cards } from "./types.js";
 import { concatEvents, arrEqual, deepCopy, doubleIt, isCoord, isIntInRange } from "./utility.js";
 import { socketTable } from "./users.js";
 import { PlayerInfo } from "./player.js";
 import { TURN_LENGTH } from "../Client/constants.js";
 import b from "./../Client/buildings.json" assert { type: "json" };
-import u from "./../Client/units.json" assert {type: "json"}; // See if this works or needs parsing
-import c from "./../Client/cards.json" assert {type: "json"};
+import u from "./../Client/units.json" assert {type: "json"};
 
-export { GameState, Tile, buildings, units, cards }; // Tile, Field
+export { GameState, Tile, buildings, units }; // Tile, Field
 
 const buildings = b as {[key: string]: BuildingStats & {faction: Faction}}; // To establish type
 const units = u as {[key: string]: UnitStats & {faction: Faction}};
-const cards = c as {[key: string]: Card};
 
 class GameState {
     public turn: Team = 0;
