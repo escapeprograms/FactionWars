@@ -7,7 +7,7 @@ import { socketTable, generateClientId } from "./users.js"
 import { isValidName } from "../Client/functions.js";
 import { TURN_LENGTH } from "../Client/constants.js";
 import { createLobby, joinLobby, filterLobby, lobbyTable, verifyLobby } from "./lobby.js";
-import { SocketState, Faction, Lobby, ActiveLobby, Player, SocketInfo, GameState, PlayerInfo, PlayerArr, SocketEvent, PlayerStatus, SocketInfoLobby, PlayerInGame, SocketInfoGame} from "./types.js";
+import { SocketState, Faction, Lobby, ActiveLobby, Player, SocketInfo, GameState, PlayerInfo, PlayerArr, SocketEvent, PlayerStatus, SocketInfoLobby, PlayerInGame, SocketInfoGame, SocketInfoGameEnd} from "./types.js";
 import { isCoord, doubleIt } from "./utility.js";
 
 const clientPath = path.resolve("build/Client")
@@ -58,6 +58,17 @@ io.on("connection", (socket: Socket) => {
         startTurn(game);
     }
 
+    function removeFromLobby(sock: SocketInfoLobby | SocketInfoGameEnd) {
+        const {player, lobby} = sock.info;
+        lobby.players = lobby.players.filter(x => x.id !== socket.id);
+        if (lobby.players.length === 0) {
+            // Close lobby if lobby is empty
+            delete lobbyTable[lobby.id];
+        } else {
+            socket.to(lobby.id).emit("player-left-lobby", sock.clientId);
+        }
+    }
+
 
     console.log("New connection: " + socket.id);//
     // Add socket to socketTable
@@ -94,14 +105,7 @@ io.on("connection", (socket: Socket) => {
                     // Remove player from lobby
                 case SocketState.Lobby: {
                     // Remove player from lobby
-                    const {player, lobby} = sock.info;
-                    lobby.players = lobby.players.filter(x => x.id !== socket.id);
-                    if (lobby.players.length === 0) {
-                        // Close lobby if lobby is empty
-                        delete lobbyTable[lobby.id];
-                    } else {
-                        socket.to(lobby.id).emit("player-left-lobby", sock.clientId);
-                    }
+                    removeFromLobby(sock);
                 }
                 case SocketState.Game: {
                     const {player, lobby} = sock.info;
@@ -205,21 +209,13 @@ io.on("connection", (socket: Socket) => {
             socket.emit("faction-change-error", "invalid-faction");
         } else {
             const {player, lobby} = (sock as SocketInfoLobby).info!;
-            /*
-            // Check that the faction is not the same as the current faction
-            if (faction !== user.faction) {
-                user.faction = faction;
+            // Only emit if necessary
+            if (faction !== player.faction) {
+                player.faction = faction;
                 socket.emit("faction-change-success", faction);
-                socket.to(lobby.id).emit("faction-change", { clientId: sock.clientId, faction: user.faction });
-            } else {
-                socket.emit("faction-change-error", "same-faction");
+                socket.to(lobby.id).emit("faction-change", { clientId: sock.clientId, faction: player.faction });
+                console.log(socket.id + " has changed their faction to: " + faction);//
             }
-            */
-            // Allow change to same faction
-            player.faction = faction;
-            socket.emit("faction-change-success", faction);
-            socket.to(lobby.id).emit("faction-change", { clientId: sock.clientId, faction: player.faction });
-            console.log(socket.id + " has changed their faction to: " + faction);//
         }
     });
     socket.on("start-game", ()=> {
@@ -317,7 +313,21 @@ io.on("connection", (socket: Socket) => {
             sendEvents(game.play((sock as SocketInfoGame).info.player.playerInfo.self, cardIndex, targets), game);
         }
     });
-    // TODO: Handle play card, special actions, win condition
+    socket.on("goto", (state) => {
+        const sock = socketTable[socket.id];
+        if (checkState(sock, SocketState.GameEnd)) {
+            if (state === "lobby") {
+                // TODO: Change playerstate for both of these 
+                sock.state = SocketState.Lobby;
+                (sock as SocketInfoGameEnd).info.player.status = PlayerStatus.Active;
+            } else if (state === "menu") {
+                removeFromLobby(sock as SocketInfoGameEnd);
+                sock.state = SocketState.Menu;
+                (sock as SocketInfoGameEnd).info.player.status = PlayerStatus.Active;
+            }
+        }
+    });
+    // TODO: Handle special actions (unit/building activations), win condition
 })
 
 server.on("error", (e: string) => {

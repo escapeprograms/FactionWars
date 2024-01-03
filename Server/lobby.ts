@@ -1,4 +1,4 @@
-import { ActiveLobby, Lobby, Player, Result, failure, success } from "./types.js";
+import { ActiveLobby, Lobby, Player, PlayerStatus, Result, failure, success } from "./types.js";
 import { socketTable } from "./users.js"
 
 export const lobbyTable: { [key: string]: Lobby } = {};
@@ -81,5 +81,6 @@ export function verifyLobby(lobby: Lobby): boolean {
     players.forEach(p=>factions[p.faction] = true);
     // 4 users, unique factions, 2 users per team
     // DOES NOT VERIFY THAT THE LOBBY IS NOT AN ALREADY STARTED GAME
-    return players.length === 4 && Object.keys(factions).length === 4 && players.reduce((acc, e)=>acc + e.team, 0) === 2;
+    return players.length === 4 && Object.keys(factions).length === 4 && 
+    players.reduce((acc, e)=>acc + e.team, 0) === 2 && players.every(p => p.status === PlayerStatus.Active);
 }
