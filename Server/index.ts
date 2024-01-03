@@ -303,9 +303,18 @@ io.on("connection", (socket: Socket) => {
             if (!isCoord(source) || !isCoord(target)) return;
             const game = (sock as SocketInfoGame).info.lobby.gameInfo;
             if (!game.active) return;
-            const events = game.attack((sock as SocketInfoGame).info.player.playerInfo!.self, source, target);
+            const events = game.attack((sock as SocketInfoGame).info.player.playerInfo.self, source, target);
 
             sendEvents(events, game);
+        }
+    });
+    socket.on("play", (cardIndex, targets) => {
+        const sock = socketTable[socket.id];
+        if (checkState(sock, SocketState.Game)) {
+            if (typeof(cardIndex) !== "number" || typeof(targets) !== "object") return;
+            const game = (sock as SocketInfoGame).info.lobby.gameInfo;
+            if (!game.active) return;
+            sendEvents(game.play((sock as SocketInfoGame).info.player.playerInfo.self, cardIndex, targets), game);
         }
     });
     // TODO: Handle play card, special actions, win condition

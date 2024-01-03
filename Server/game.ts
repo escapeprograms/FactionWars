@@ -239,10 +239,14 @@ class GameState {
         return valid;
     }
 
+    canAction(player: PlayerInGame) {
+        return player && player.team === this.turn && player.playerInfo.active;
+    }
+
     move(player: PlayerId, unit: Coordinate, steps: Coordinate[]): PlayerArr<SocketEvent[]> {
         const p = this.getPlayer(player);
         const u = this.getUnit(unit);
-        if (!p || p.team !== this.turn || !p.playerInfo.active) return emptyPArr(); // Not a player or not their turn
+        if (!this.canAction(p)) return emptyPArr(); // Not a player or not their turn
         if (!u || !arrEqual(u.owner, player)) return emptyPArr(); // Not a valid unit or not their unit
         if (steps.some(s => !s.every(x => isIntInRange(x, 0, this.fieldSize - 1)))) return emptyPArr(); // Invalid coordinate
         return u.move(this, steps);
@@ -251,11 +255,19 @@ class GameState {
     attack(player: PlayerId, source: Coordinate, target: Coordinate): Events {
         const p = this.getPlayer(player);
         const o = this.getOccupant(source);
-        if (!p || p.team !== this.turn || !p.playerInfo.active) return emptyPArr();
+        if (!this.canAction(p)) return emptyPArr();
         if (!o || !arrEqual(o.owner, player)) return emptyPArr();
         if (arrEqual(source, target) || !target.every(x => isIntInRange(x, 0, this.fieldSize - 1))) return emptyPArr(); // Invalid target coordinate
         return o.attack(this, target);
     }
+
+    play(player: PlayerId, cardIndex: number, targets: {[key: string]: any}): Events {
+        const p = this.getPlayer(player);
+        if (!this.canAction(p)) return emptyPArr();
+        if (!isIntInRange(cardIndex, 0, p.playerInfo.cards.length-1)) return emptyPArr();
+        return p.playerInfo.play(this, cardIndex, targets);
+    }
+
 }
 
 class Tile {
