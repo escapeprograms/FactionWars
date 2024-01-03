@@ -8,6 +8,8 @@ start-game (inside the lobby, host only)
 change-end-status (in game, ends/unends your turn, send true for end and false for unend)
 move-unit (in game, send unit Coordinate and steps array)
 attack (in game, send source and target Coordinates)
+play (in game, send card index and targets object)
+goto (gameEnd, send "lobby" or "menu" to go to lobby/menu)
 
 play card (subcases: operation, building a building, deploying a unit)
 activate unit
