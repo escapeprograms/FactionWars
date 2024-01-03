@@ -194,6 +194,7 @@ const validateTarget: {[key:string]: (game: GameState, target: any, owner: Playe
         "player" in target && validateTarget["player"](game, target["player"], owner) && 
         "index" in target && isIntInRange(target["index"], 0, game.getPlayer(target["player"]).playerInfo.cards.length - 1) 
     // For a card, it should be an object: {player: PlayerId, index: number}
+    //TODO: eventually implement "choice": (game: GameState, target: any) => 
 };
 
 const validateProperties: {[key:string]: (game: GameState, target: any, owner: PlayerId, value: any) => boolean} = {

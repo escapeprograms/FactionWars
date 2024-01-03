@@ -61,36 +61,6 @@ export class PlayerInfo {
         }
         return ret;
     }
-    // Checks validity of card targets
-    validTargets(game: GameState, card: Card, targets: {[key: string]: any}): boolean {
-        if (Object.keys(targets).length !== card.targets.length) return false;
-        const isCoord = (c: any, min?: number, max?: number) => Array.isArray(c) && c.length === 2 && c.every(x => isIntInRange(x, min, max));
-        card.targets.forEach((t, i) => {
-            const tar = targets[t.name];
-            if (!tar) return false;
-            // TODO: Check the properties as well
-            switch (t.type) {
-                case "tile":
-                    if (!isCoord(tar, 0, game.fieldSize - 1)) return false;
-                    return true;
-                case "unit":
-                    if (!isCoord(tar, 0, game.fieldSize - 1)) return false;
-                    if (!game.getUnit(tar as Coordinate)) return false;
-                    return true;
-                case "building":
-                    if (!isCoord(tar, 0, game.fieldSize - 1)) return false;
-                    if (!game.getBuilding(tar as Coordinate)) return false;
-                case "player":
-                    if(!isCoord(tar, 0, 1)) return false;
-                    return true;
-                case "choice": // Do this eventually
-                default:
-                    console.log("Unknown type: " + t.type);
-                    throw new Error(`Target type ${t.type} not supported`);
-            }
-        });
-        return true;
-    }
     clientCopy(player?: PlayerId) {
         return {
             self: this.self,

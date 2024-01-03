@@ -317,7 +317,6 @@ io.on("connection", (socket: Socket) => {
         const sock = socketTable[socket.id];
         if (checkState(sock, SocketState.GameEnd)) {
             if (state === "lobby") {
-                // TODO: Change playerstate for both of these 
                 sock.state = SocketState.Lobby;
                 (sock as SocketInfoGameEnd).info.player.status = PlayerStatus.Active;
             } else if (state === "menu") {
@@ -327,7 +326,7 @@ io.on("connection", (socket: Socket) => {
             }
         }
     });
-    // TODO: Handle special actions (unit/building activations), win condition
+    // TODO: Handle special actions (unit/building activations)
 })
 
 server.on("error", (e: string) => {
