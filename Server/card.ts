@@ -117,31 +117,7 @@ interface Card {
     effects: Effect[],
     onDiscard?: Effect
 }
-/*
 
-const cards = {
-    "bank": () => mkSpawner("bank", 2, "Building"),
-    "power plant": () => mkSpawner("power plant", 2, "Building"),
-    "sentry turret": () => mkSpawner("sentry turret", 4, "Building"),
-    "prototype": () => {const p = mkSpawner("prototype", 3, "Unit"); p.effects.push(() => {
-        "damage" in p.modifiers ? p.modifiers.damage!++ : p.modifiers.damage = 1;
-        "health" in p.modifiers ? p.modifiers.health!++ : p.modifiers.health = 1;
-        return emptyPArr();
-    }); return p;},
-    "war funds": () => ({
-        "name": "War Funds",
-        "faction": "N", // Faction this belongs to, or "N" for Neutral
-        "cardType": CardType.Operation,
-        "cost": 0, 
-        "targets": [],
-        "effects": [((game: GameState, owner: PlayerId)=>{
-            game.getPlayer(owner).playerInfo.money += 3; 
-            const ret = emptyPArr(); doubleIt((i, j)=>ret[i][j].push({event: "change-money", params: [[...owner], 3]}), 0, 0, 2, 2); 
-            return ret;
-        })],
-        "modifiers": {}
-    })
-}*/
 
 // Does not check if it is the player's turn
 function play(game: GameState, owner: PlayerId, index: number, targets: {[key: string]: any}): Events {
