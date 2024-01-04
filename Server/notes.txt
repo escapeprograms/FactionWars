@@ -107,6 +107,15 @@ Win Condition
  - When a player's headquarters is destroyed, they lose the ability to play cards and command their units and buildings
  - When a team loses all of their headquarters, they lose and the other team wins
 
+Start of Turn:
+ - The server sends the "turn-start" event first, then any events resulting from turn start
+ - The server does not sent events for resetting unit moves, steps, and attacks, building moves, and player end-turn status resets.
+   Those events should be automatically done by the client.
+
+End of Turn:
+ - The server sends the "turn-end" event first, then any events resulting from turn end
+ - The server does not sent an event for changing the turn number. The client should adjust the turn number automatically.
+
  Note: It is difficult to send functions over sockets. Do not have a loop with objects that reference each other.
  In order to facilitate that, we are removing circular and duplicate references within Players and GameStates.
  When storing or sending a game, we ignore the Game class and instead just serialize the GameState class.

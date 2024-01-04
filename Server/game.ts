@@ -118,6 +118,7 @@ class GameState {
         clearTimeout(this.timerID);*/
 
         const ret = emptyPArr<SocketEvent>();
+        doubleIt((i, j) => ret[i][j].push({event:"turn-end", params:[]}),0,0,2,2);
 
         // Activate end of turn effects, as applicable
         this.buildings.forEach(b=>concatEvents(ret, b.endTurn(this)));
@@ -130,6 +131,7 @@ class GameState {
 
     startTurn(): PlayerArr<SocketEvent[]> {
         const ret = emptyPArr<SocketEvent>();
+        doubleIt((i, j) => ret[i][j].push({event:"turn-start", params:[]}),0,0,2,2);
 
         // Activate start of turn effects, as applicable
         this.buildings.forEach(b=>concatEvents(ret, b.startTurn(this)));
@@ -138,6 +140,7 @@ class GameState {
         // Players draw a card at the start of their turn
         this.players[this.turn].forEach(p => concatEvents(ret, p.playerInfo.draw()));
 
+        // This is the only "event" that is not sent to the client
         // Reset the team's turnEnd status
         this.turnEnd[this.turn] = this.players[this.turn].map(p=>!(p.playerInfo.active && p.status === PlayerStatus.Active));
 
