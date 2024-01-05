@@ -1,16 +1,14 @@
 import { CardType, Team, Coordinate, PlayerId, ClientGameState, Faction, PlayerArr, emptyPArr, SocketEvent, Events, PlayerStatus, PlayerInGame } from "./types.js";
-import { Building, BuildingStats, Unit, UnitStats, Card, Deck, cards } from "./types.js";
+import { Building, BuildingStats, Unit, UnitStats, Card, Deck, cards, units } from "./types.js";
 import { concatEvents, arrEqual, deepCopy, doubleIt, isCoord, isIntInRange } from "./utility.js";
 import { socketTable } from "./users.js";
 import { PlayerInfo } from "./player.js";
 import { TURN_LENGTH } from "../Client/constants.js";
 import b from "./../Client/buildings.json" assert { type: "json" };
-import u from "./../Client/units.json" assert {type: "json"};
 
-export { GameState, Tile, buildings, units }; // Tile, Field
+export { GameState, Tile, buildings }; // Tile, Field
 
 const buildings = b as {[key: string]: BuildingStats & {faction: Faction}}; // To establish type
-const units = u as {[key: string]: UnitStats & {faction: Faction}};
 
 class GameState {
     public turn: Team = 0;
@@ -292,17 +290,3 @@ class Tile {
         this.occupantType = null;
     }
 }
-
-/*// Returns array of all tiles that are within a given radius of a coordinate
-// Coordinate should have integer values, and radius should be nonnegative
-function withinRadius(c: Coordinate, r: number): Coordinate[] {
-    const result: Coordinate[] = [];
-    const maxY = Math.floor(r);
-    for (let y = maxY; y >= -maxY; y--) {
-        let maxX = Math.floor(Math.sqrt(r**2 - y**2));
-        for (let x = maxX; x >= -maxX; x--) {
-            result.push([c[0] + x, c[1] + y])
-        }
-    }
-    return result;
-}*/
