@@ -23,9 +23,9 @@ type UnitStats  = {
     speed: number;
     range: number; // 1 = melee
     splash: number; // Splash radius in tiles, 0 for melee
+    actives: {[key: string]: any}[];
+    passives: string[];
     attributes: string[]; // Could potentially make a new type or enum for this
-    // Possibly add methods for getting and changing stats
-    // Possibly add methods for taking damage, dying, and other actions
 }
 
 class Unit {

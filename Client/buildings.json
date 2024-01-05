@@ -11,7 +11,7 @@
         "energyGen": 0,
         "buildTime": 1,
         "size": 1,
-        "actives": ["Array of active ability names"],
+        "actives": [{"name": "Array of active ability objects", "otherKeys": "other values"}],
         "passives": ["Array of passive ability names"],
         "attributes": []
     },

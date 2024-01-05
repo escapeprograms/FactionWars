@@ -7,7 +7,7 @@
         "range": 0,
         "splash": 0,
         "speed": 1,
-        "actives": ["Array of active ability names"],
+        "actives": [{"name": "Array of active ability objects", "otherKeys": "other values"}],
         "passives": ["Passive ability names"],
         "attributes": []
     },
