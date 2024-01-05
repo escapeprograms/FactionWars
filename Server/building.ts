@@ -1,9 +1,11 @@
-import { Coordinate, PlayerId, Player, Unit, GameState, emptyPArr, PlayerArr, SocketEvent, Events } from "./types.js";
+import { Coordinate, Faction, PlayerId, Unit, GameState, emptyPArr, PlayerArr, SocketEvent, Events } from "./types.js";
 import { arrEqual, concatEvents, dist, doubleIt } from "./utility.js";
-import { PlayerInfo } from "./player.js";
 import { withinRadiusInBounds } from "../Client/functions.js";
+import b from "./../Client/buildings.json" assert { type: "json" };
 
-export { Building, BuildingStats};
+export { Building, BuildingStats, buildings};
+
+const buildings = b as {[key: string]: BuildingStats & {faction: Faction}}; // To establish type
 
 type BuildingStats  = {
     name: string,
