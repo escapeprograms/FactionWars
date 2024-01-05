@@ -5,6 +5,18 @@ import b from "./../Client/buildings.json" assert { type: "json" };
 
 export { Building, BuildingStats, buildings};
 
+// Add default values to buildings
+for (let key in b) {
+    const building = (b as {[key: string]: {[key: string]: any}})[key];
+    if (!building["damage"]) building["damage"] = 0;
+    if (!building["splash"]) building["splash"] = 0;
+    if (!building["range"]) building["range"] = 0;
+    if (!building["moneyGen"]) building["moneyGen"] = 0;
+    if (!building["energyGen"]) building["energyGen"] = 0;
+    if (!building["actives"]) building["actives"] = [];
+    if (!building["passives"]) building["passives"] = [];
+    if (!building["attributes"]) building["attributes"] = [];
+}
 const buildings = b as {[key: string]: BuildingStats & {faction: Faction}}; // To establish type
 
 type BuildingStats  = {
