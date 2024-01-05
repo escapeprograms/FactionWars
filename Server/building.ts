@@ -202,4 +202,13 @@ class Building {
         return ret;
         // There should be no more references to this unit so it can be garbage collected?
     }
+    heal(game: GameState, amount: number): Events {
+        const ret = emptyPArr<SocketEvent>();
+        const healed = Math.min(amount, this.stats.maxHealth - this.health);
+        // Add possible ability triggers here
+        this.health += healed;
+        doubleIt((i, j)=>ret[i][j].push({event: "heal", params: [[...this.loc, amount]]},
+        {event: "stat-change", params: [[...this.loc, "health", healed]]}),0,0,2,2);
+        return ret;
+    }
 }
