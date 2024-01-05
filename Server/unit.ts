@@ -1,8 +1,19 @@
-import { Coordinate, PlayerId, PlayerArr, emptyPArr, SocketEvent, Events, Building, GameState } from "./types.js";
+import { Coordinate, Faction, PlayerId, PlayerArr, emptyPArr, SocketEvent, Events, Building, GameState } from "./types.js";
 import { arrEqual, concatEvents, dist, doubleIt } from "./utility.js";
 import { withinRadiusInBounds } from "../Client/functions.js";
+import u from "./../Client/units.json" assert {type: "json"};
 
-export {Unit, UnitStats};
+export {Unit, UnitStats, units};
+
+// Add default values to units
+for (let key in u) {
+    const unit = (u as {[key: string]: {[key: string]: any}})[key];
+    if (!unit["actives"]) unit["actives"] = [];
+    if (!unit["passives"]) unit["passives"] = [];
+    if (!unit["attributes"]) unit["attributes"] = [];
+    if (!unit["splash"]) unit["splash"] = 0;
+}
+const units = u as {[key: string]: UnitStats & {faction: Faction}};
 
 type UnitStats  = {
     // Contains the stats of a unit
@@ -73,7 +84,7 @@ class Unit {
     attack(game: GameState, target: Coordinate): Events {
         const ret = emptyPArr<SocketEvent>();
         if (this.attacks < 1) return ret; // Out of attacks
-        if (dist(this.loc, target) > this.stats.range) return ret; // Out of range
+        if (dist(this.loc, target) > this.stats.range || arrEqual(this.loc, target)) return ret; // Out of range / Cannot attack self
         if (!game.sight(this.loc, target)) return ret; // Cannot see target
         if (this.stats.splash <= 0 && !game.getTile(target).occupant) return ret; // Non-splashers cannot attack empty tile
         doubleIt((i, j) => ret[i][j].push({event: "attack", params: [[...this.loc], [...target]]}), 0, 2, 0, 2);

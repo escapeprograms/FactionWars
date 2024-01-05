@@ -129,7 +129,7 @@ class Building {
     attack(game: GameState, target: Coordinate): Events {
         const ret = emptyPArr<SocketEvent>();
         if (this.attacks < 1 || this.stats.damage === 0) return ret; // Out of attacks / Cannot attack
-        if (dist(this.loc, target) > this.stats.range) return ret; // Out of range
+        if (dist(this.loc, target) > this.stats.range || arrEqual(this.loc, target)) return ret; // Out of range / Cannot attack self
         if (!game.sight(this.loc, target)) return ret; // Cannot see target
         if (this.stats.splash <= 0 && !game.getTile(target).occupant) return ret; // Non-splashers cannot attack empty tile
         doubleIt((i, j) => ret[i][j].push({event: "attack", params: [[...this.loc], [...target]]}), 0, 2, 0, 2);
