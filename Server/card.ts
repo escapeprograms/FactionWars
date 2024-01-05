@@ -4,7 +4,7 @@ import { arrEqual, concatEvents, deepCopy, doubleIt, isCoord, isIntInRange } fro
 
 import c from "./../Client/cards.json" assert {type: "json"};
 
-export { Card, Deck, play};
+export { Card, Deck, play, Effect, JsonEffect, Target};
 
 class Deck {
     private cards: Card[] = [];
@@ -212,6 +212,9 @@ const validateProperties: {[key:string]: (game: GameState, target: any, owner: P
     "empty": (game, target) => game.getTile(target).occupant === null,
     "spawnable": (game, target: Coordinate, owner) => !game.getTile(target).occupant && 
         adj(game, target).some(c => game.getTile(c)?.occupantType === "building" && arrEqual(game.getBuilding(c)!.owner, owner)),
+    // For buildings or units
+    // type is either "self", "allied", or "enemy"
+    "owner": (game, target: Coordinate, owner, type: string) => type === "self" ? arrEqual(target, owner) : (type === "allied") === (target[0] === owner[0])
 }
 
 //const getTerms: {[key:string]: (game: GameState, target: any) => any}
