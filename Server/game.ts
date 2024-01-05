@@ -66,6 +66,7 @@ class GameState {
     }
 
     // Spawns a building with its top left corner at (x, y)
+    // BuildingStats may be modified in the future!
     // Returns socket events for the building spawn
     spawnBuilding(building: BuildingStats, x:number, y:number, owner: PlayerId): Events {
         const ret = emptyPArr<SocketEvent>();
@@ -81,6 +82,7 @@ class GameState {
         }
         return ret;
     }
+    // UnitStats may be modified in the future!
     spawnUnit(unit: UnitStats, x:number, y:number, owner: PlayerId): Events {
         const ret = emptyPArr<SocketEvent>();
         if (!this.field[x][y].occupant) {

@@ -1,4 +1,4 @@
-import { Coordinate, Faction, PlayerId, PlayerArr, emptyPArr, SocketEvent, Events, Building, GameState } from "./types.js";
+import { Coordinate, Faction, PlayerId, PlayerArr, emptyPArr, SocketEvent, Events, Building, GameState, JsonEffect, Target } from "./types.js";
 import { arrEqual, concatEvents, dist, doubleIt } from "./utility.js";
 import { withinRadiusInBounds } from "../Client/functions.js";
 import u from "./../Client/units.json" assert {type: "json"};
@@ -7,15 +7,39 @@ export {Unit, UnitStats, units};
 
 // Add default values to units
 for (let key in u) {
-    const unit = (u as {[key: string]: {[key: string]: any}})[key];
+    const unit = (u as {[key: string]: JsonUnit})[key];
     if (!unit["actives"]) unit["actives"] = [];
+    else unit.actives.forEach(ability => {
+        ability.effects.forEach(effect => {
+            if (!effect.modifiers) effect.modifiers = {};
+        })
+    })
     if (!unit["passives"]) unit["passives"] = [];
     if (!unit["attributes"]) unit["attributes"] = [];
     if (!unit["splash"]) unit["splash"] = 0;
 }
-const units = u as {[key: string]: UnitStats & {faction: Faction}};
+const units = (u as {[key: string]: JsonUnit}) as {[key: string]: UnitStats & {faction: Faction}};
 
-type UnitStats  = {
+type ActiveAbility = {
+    name: string,
+    targets: Target[],
+    effects: JsonEffect[]
+}
+
+type JsonUnit = {
+    name: string;
+    faction: Faction;
+    maxHealth: number;
+    damage: number; // Attack damage
+    speed: number;
+    range: number; // 1 = melee
+    splash?: number; // Splash radius in tiles, 0 for melee
+    actives?: ActiveAbility[];
+    passives?: string[];
+    attributes?: string[]; // Could potentially make a new type or enum for this
+}
+
+type UnitStats = {
     // Contains the stats of a unit
     name: string;
     maxHealth: number;
@@ -23,7 +47,7 @@ type UnitStats  = {
     speed: number;
     range: number; // 1 = melee
     splash: number; // Splash radius in tiles, 0 for melee
-    actives: {[key: string]: any}[];
+    actives: ActiveAbility[];
     passives: string[];
     attributes: string[]; // Could potentially make a new type or enum for this
 }
