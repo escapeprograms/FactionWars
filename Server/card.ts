@@ -152,6 +152,21 @@ function replaceVars(obj: {[key: string]: any}, vars: {[key: string]: any}) {
 }
 
 const effects: {[key: string]: (game: GameState, owner: PlayerId, card: Card, params: {[key: string]: any}) => Events} = {
+    "gain": (game, owner, card, params) => {
+        // Assume gain is money for now
+        const ret = emptyPArr<SocketEvent>();
+        game.getPlayer(params.target).playerInfo.money += params.quantity
+        doubleIt((i, j)=>ret[i][j].push({event: "change-money", params: [[...params.target], params.quantity]}), 0, 0, 2, 2);
+        return ret; 
+    },
+    "heal": (game, owner, card, params) => {
+        const ret = emptyPArr<SocketEvent>();
+        const target = game.getOccupant(params.target)
+        if (target) {
+            concatEvents(ret, target.heal(game, params.amount + ("heal" in params.modifiers ? params.modifiers.heal : 0)));
+        }
+        return ret;
+    },
     "modify": (game, owner, card, params) => {
         const ret = emptyPArr<SocketEvent>();
         const effect = card.effects[params.on]; // Index of the effect
@@ -164,13 +179,6 @@ const effects: {[key: string]: (game: GameState, owner: PlayerId, card: Card, pa
             effect.modifiers[params.type] = params.amount;
         }
         return ret;
-    },
-    "gain": (game, owner, card, params) => {
-        // Assume gain is money for now
-        const ret = emptyPArr<SocketEvent>();
-        game.getPlayer(params.target).playerInfo.money += params.quantity
-        doubleIt((i, j)=>ret[i][j].push({event: "change-money", params: [[...params.target], params.quantity]}), 0, 0, 2, 2);
-        return ret; 
     },
     "spawn": (game: GameState, owner: PlayerId, card, params: {[key: string]: any}) => {
         const type = params.type as string; // Building or Unit
