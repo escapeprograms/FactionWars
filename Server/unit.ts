@@ -159,6 +159,17 @@ class Unit {
         {event: "stat-change", params: [[...this.loc, "health", healed]]}),0,0,2,2);
         return ret;
     }
+    modifyStats(game: GameState, stat: keyof UnitStats, amount: number, modification: "set" | "change"): Events {
+        // For now, only modifications to stats, and only numerical modifications, are permitted
+        const ret = emptyPArr<SocketEvent>();
+        if (typeof this.stats[stat] === "number") (this.stats[stat] as number) = amount + (modification === "change" ? (this.stats[stat] as number) : 0);
+        doubleIt((i, j) => ret[i][j].push({event: "stat-change", params: [[...this.loc], stat, modification, amount]}), 0, 2, 0, 2);
+        if (this.health > this.stats.maxHealth) {
+            this.health = this.stats.maxHealth;
+            doubleIt((i, j) => ret[i][j].push({event: "stat-change", params: [[...this.loc], "health", "set", this.health]}), 0, 2, 0, 2);
+        }
+        return ret;
+    }
     isAdj(loc: Coordinate): boolean {
         return loc[0] % 1 === 0 && loc[1] % 1 === 0 && (Math.abs(loc[0] - this.loc[0]) + Math.abs(loc[1] - this.loc[1]) === 1);
     }

@@ -83,8 +83,8 @@
         "cardType": "U",
         "effects": [
             {"effect": "spawn", "type": "U", "id": "prototype", "loc": "$loc"}, 
-            {"effect": "modify", "modification": "change", "on": 0, "type": "attack", "amount": 1},
-            {"effect": "modify", "modification": "change", "on": 0, "type": "health", "amount": 1}
+            {"effect": "modify-effect", "modification": "change", "on": 0, "type": "attack", "amount": 1},
+            {"effect": "modify-effect", "modification": "change", "on": 0, "type": "health", "amount": 1}
         ]
     },
 

@@ -163,11 +163,12 @@ const effects: {[key: string]: (game: GameState, owner: PlayerId, card: Card, pa
         const ret = emptyPArr<SocketEvent>();
         const target = game.getOccupant(params.target)
         if (target) {
-            concatEvents(ret, target.heal(game, params.amount + ("heal" in params.modifiers ? params.modifiers.heal : 0)));
+            //concatEvents(ret, target.heal(game, params.amount + ("heal" in params.modifiers ? params.modifiers.heal : 0)));
+            return target.heal(game, params.amount + ("heal" in params.modifiers ? params.modifiers.heal : 0));
         }
         return ret;
     },
-    "modify": (game, owner, card, params) => {
+    "modify-effect": (game, owner, card, params) => {
         const ret = emptyPArr<SocketEvent>();
         const effect = card.effects[params.on]; // Index of the effect
         if (effect === undefined) return ret;
@@ -179,6 +180,13 @@ const effects: {[key: string]: (game: GameState, owner: PlayerId, card: Card, pa
             effect.modifiers[params.type] = params.amount;
         }
         return ret;
+    },
+    "modify-stats": (game, owner, card, params) => {
+        const target = game.getOccupant(params.target);
+        if (target) {
+            return target.modifyStats(game, params.stat, params.amount, params.type);
+        }
+        return emptyPArr<SocketEvent>();
     },
     "spawn": (game: GameState, owner: PlayerId, card, params: {[key: string]: any}) => {
         const type = params.type as string; // Building or Unit
