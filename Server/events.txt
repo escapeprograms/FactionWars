@@ -53,4 +53,4 @@ turn-status-change (gives PlayerId, true/false, tells client player readied/unre
 turn-start (tells client a new turn has started)
 turn-end (tells client the current turn has ended)
 heal (gives target, amount, tells client target healed by amount)
-stat-change (gives, target, stat, amount, tells client target's stat changed by amount)
+stat-change (gives target, stat, type, amount, tells client target's stat was changed by / set to amount)
