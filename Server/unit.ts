@@ -10,21 +10,26 @@ for (let key in u) {
     const unit = (u as {[key: string]: JsonUnit})[key];
     if (!unit["actives"]) unit["actives"] = [];
     else unit.actives.forEach(ability => {
+        if (ability.uses === undefined) ability.uses = 1;
         ability.effects.forEach(effect => {
             if (!effect.modifiers) effect.modifiers = {};
-        })
-    })
+        });
+    });
     if (!unit["passives"]) unit["passives"] = [];
     if (!unit["attributes"]) unit["attributes"] = [];
     if (!unit["splash"]) unit["splash"] = 0;
 }
 const units = (u as {[key: string]: JsonUnit}) as {[key: string]: UnitStats & {faction: Faction}};
 
-type ActiveAbility = {
+interface JsonActiveAbility {
     name: string,
     targets: Target[],
-    effects: JsonEffect[]
+    effects: JsonEffect[],
+    uses?: number // Uses per turn
 }
+interface ActiveAbility extends JsonActiveAbility {
+    uses: number;
+} 
 
 type JsonUnit = {
     name: string;
@@ -34,7 +39,7 @@ type JsonUnit = {
     speed: number;
     range: number; // 1 = melee
     splash?: number; // Splash radius in tiles, 0 for melee
-    actives?: ActiveAbility[];
+    actives?: JsonActiveAbility[];
     passives?: string[];
     attributes?: string[]; // Could potentially make a new type or enum for this
 }

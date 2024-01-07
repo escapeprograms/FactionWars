@@ -6,16 +6,24 @@ import b from "./../Client/buildings.json" assert { type: "json" };
 export { Building, BuildingStats, buildings};
 
 // Add default values to buildings
+const defaults: {[key: string]: any} = {
+    damage: 0,
+    splash: 0,
+    range: 0,
+    moneyGen: 0,
+    energyGen: 0,
+    actives: [],
+    passives: [],
+    attributes: [],
+}
+
 for (let key in b) {
     const building = (b as {[key: string]: {[key: string]: any}})[key];
-    if (!building["damage"]) building["damage"] = 0;
-    if (!building["splash"]) building["splash"] = 0;
-    if (!building["range"]) building["range"] = 0;
-    if (!building["moneyGen"]) building["moneyGen"] = 0;
-    if (!building["energyGen"]) building["energyGen"] = 0;
-    if (!building["actives"]) building["actives"] = [];
-    if (!building["passives"]) building["passives"] = [];
-    if (!building["attributes"]) building["attributes"] = [];
+    for (let k in defaults) {
+        if (!building[k]) building[k] = defaults[k];
+    }
+    // TODO: Add active and passive abilities
+    // TODO: Do defaults in active and passive abilities
 }
 const buildings = b as {[key: string]: BuildingStats & {faction: Faction}}; // To establish type
 
