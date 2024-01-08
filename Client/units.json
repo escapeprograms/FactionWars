@@ -1,7 +1,7 @@
 {
     "template": {
         "name":"template | order unit entries by faction, then name",
-        "faction": "N for neutral",
+        "faction": "N",
         "maxHealth": 0,
         "damage": 0,
         "range": 0,

@@ -1,7 +1,7 @@
 {
     "template": {
         "name":"template | order building entries by faction, then name",
-        "faction": "N for neutral",
+        "faction": "N",
         "maxHealth": 0,
         "damage": 0,
         "splash": 0,
@@ -11,7 +11,7 @@
         "energyGen": 0,
         "buildTime": 1,
         "size": 1,
-        "actives": [{"name": "Array of active ability objects", "otherKeys": "other values"}],
+        "actives": [{"name": "Array of active ability objects", "targets": [], "effects": []}],
         "passives": ["Array of passive ability names"],
         "attributes": []
     },
@@ -28,7 +28,7 @@
         "energyGen": 4,
         "buildTime": 0,
         "size": 3,
-        "actives": ["Industrial Might"],
+        "actives": [],
         "passives": [],
         "attributes": ["hq"]
     },

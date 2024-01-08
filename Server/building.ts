@@ -1,4 +1,4 @@
-import { Coordinate, Faction, PlayerId, Unit, GameState, emptyPArr, PlayerArr, SocketEvent, Events } from "./types.js";
+import { Coordinate, Faction, PlayerId, Unit, GameState, emptyPArr, PlayerArr, SocketEvent, Events, processData, EntityStats, JsonActiveAbility, Entity } from "./types.js";
 import { arrEqual, concatEvents, dist, doubleIt } from "./utility.js";
 import { withinRadiusInBounds } from "../Client/functions.js";
 import b from "./../Client/buildings.json" assert { type: "json" };
@@ -10,57 +10,76 @@ const defaults: {[key: string]: any} = {
     damage: 0,
     splash: 0,
     range: 0,
+    upkeep: 0,
     moneyGen: 0,
     energyGen: 0,
-    actives: [],
+    actives: [{
+        uses: 1,
+        effects: [{
+            modifiers: {}
+        }]
+    }],
     passives: [],
     attributes: [],
 }
 
-for (let key in b) {
-    const building = (b as {[key: string]: {[key: string]: any}})[key];
-    for (let k in defaults) {
-        if (!building[k]) building[k] = defaults[k];
-    }
-    // TODO: Add active and passive abilities
-    // TODO: Do defaults in active and passive abilities
-}
-const buildings = b as {[key: string]: BuildingStats & {faction: Faction}}; // To establish type
+// TODO: Add active and passive abilities
+// TODO: Do defaults in active and passive abilities
+// TODO: Do HQ's Industrial Might
+processData(b, defaults);
+const buildings = (b as {[key: string]: JsonBuilding}) as {[key: string]: BuildingStats & {faction: Faction}}; // To establish type
 
-type BuildingStats  = {
-    name: string,
+type JsonBuilding = {
+    name: string;
+    faction: Faction;
     maxHealth: number;
-    damage: number; // Attack damage, 0 for doesn't attack?
-    splash: number; // splash radius, 0 for no splash/doesn't attack
-    range: number; // 0 for doesn't attack normally?
+    damage: number; // Attack damage
+    range?: number; // 1 = melee
+    upkeep?: number; // amount of energy required for upkeep
+    moneyGen?: number; // Money generated at the start of each turn
+    energyGen?: number; // Energy generated at the start of each turn
+    buildTime: number; 
+    size: number; // Buildings are assumed to be square
+    splash?: number; // Splash radius in tiles, 0 for melee
+    actives?: JsonActiveAbility[];
+    passives?: string[];
+    attributes?: string[]; // Could potentially make a new type or enum for this
+}
+
+interface BuildingStats extends EntityStats {
     upkeep: number; // amount of energy required for upkeep
     moneyGen: number; // Money generated at the start of each turn
     energyGen: number; // Energy generated at the start of each turn
     buildTime: number; 
     size: number; // Buildings are assumed to be square
-    attributes: string[];
 }
 
-class Building {
-    public loc: Coordinate; // Coordinates of upper left tile
+class Building extends Entity {
     public stats: BuildingStats;
-    public owner: PlayerId; // [team, number] of player
-    public health: number; // Current health
     public buildLeft: number; // Turns left for buildTime
     public active: boolean = false; // Whether the building is active or inactive (disactivated)
-    public attacks = 0; // Number of times the building can attack this turn
-    public activeUses: number[] = []; // # of uses left this turn for each of the actives
-    constructor(game: GameState, loc: Coordinate, stats: BuildingStats, player: PlayerId) {
-        this.loc = loc;
+    constructor(game: GameState, loc: Coordinate, stats: BuildingStats, owner: PlayerId) {
+        super(game, loc, stats, owner);
         this.stats = stats;
-        this.owner = player;
-        this.health = stats.maxHealth;
         this.buildLeft = stats.buildTime;
         // TODO: Add actives and passives to buildings
         //for (let i = 0; i < stats.actives.length; i++) this.activeUses.push(0);
         // Note: Manual activation needed
     }
-    // Takes in the GameState
+    startTurn(game: GameState): PlayerArr<SocketEvent[]> {
+        const owner = game.getPlayer(this.owner).playerInfo!;
+        const ret = emptyPArr<SocketEvent>();
+        // Generate, if active
+        if(this.active) {
+            if (this.stats.moneyGen !== 0) {
+                owner.money += this.stats.moneyGen;
+                doubleIt((i, j)=>ret[i][j].push({event: "change-money", params: [[...this.owner], this.stats.moneyGen]}), 0, 0, 2, 2);
+            }
+            super.startTurn(game);
+            // Maybe other effects here
+        }
+        return ret;
+    }
     endTurn(game: GameState): Events {
         const ret = emptyPArr<SocketEvent>();
         // Decrement construction time
@@ -105,20 +124,6 @@ class Building {
         // Maybe more stuff here, such as end of turn effects, as applicable
         return ret;
     }
-    startTurn(game: GameState): PlayerArr<SocketEvent[]> {
-        const owner = game.getPlayer(this.owner).playerInfo!;
-        const ret = emptyPArr<SocketEvent>();
-        // Generate, if active
-        if(this.active) {
-            if (this.stats.moneyGen !== 0) {
-                owner.money += this.stats.moneyGen;
-                doubleIt((i, j)=>ret[i][j].push({event: "change-money", params: [[...this.owner], this.stats.moneyGen]}), 0, 0, 2, 2);
-            }
-            this.attacks = this.stats.damage > 0 ? 1 : 0;
-            // Maybe other effects here
-        }
-        return ret;
-    }
     // Returns whether or not it is active
     // Pass in owner's PlayerInfo
     activate(game: GameState): Events {
@@ -151,32 +156,6 @@ class Building {
         }
         return ret;
     }
-    attack(game: GameState, target: Coordinate): Events {
-        const ret = emptyPArr<SocketEvent>();
-        if (this.attacks < 1 || this.stats.damage === 0) return ret; // Out of attacks / Cannot attack
-        if (dist(this.loc, target) > this.stats.range || arrEqual(this.loc, target)) return ret; // Out of range / Cannot attack self
-        if (!game.sight(this.loc, target)) return ret; // Cannot see target
-        if (this.stats.splash <= 0 && !game.getTile(target).occupant) return ret; // Non-splashers cannot attack empty tile
-        doubleIt((i, j) => ret[i][j].push({event: "attack", params: [[...this.loc], [...target]]}), 0, 2, 0, 2);
-        // Eventually special effects as needed
-        // NOTE: The code does not check for friendly fire!
-        // Will have to adjust victim finding if field ever becomes non-square
-        let victim;
-        (withinRadiusInBounds(target, this.stats.splash, 0, 0, game.fieldSize-1, game.fieldSize-1) as Coordinate[]).forEach(v => {
-            if (victim = game.getOccupant(v) as Unit | Building | null) concatEvents(ret, victim.takeDamage(game, this.stats.damage));
-        });
-        
-        this.attacks--;
-        return ret;
-    }
-    takeDamage(game: GameState, damage: number): Events {
-        // Eventually implement special abilities as necessary
-        const ret = emptyPArr<SocketEvent>();
-        this.health -= damage;
-        doubleIt((i, j) => ret[i][j].push({event: "took-damage", params: [[...this.loc], damage]}), 0, 2, 0, 2);
-        if (this.health <= 0) concatEvents(ret, this.die(game));
-        return ret;
-    }
     die(game: GameState): Events {
         const ret = emptyPArr<SocketEvent>();
         const owner = game.getPlayer(this.owner);
@@ -196,41 +175,20 @@ class Building {
         concatEvents(ret, this.deactivate(game));
         concatEvents(ret, owner.playerInfo!.upkeep(game));
         // Return events
-        doubleIt((i, j) => ret[i][j].push({event: "death", params: [[...this.loc]]}), 0, 2, 0, 2);
+        concatEvents(ret, super.die(game));
         // Possible Headquarters destruction
         if (this.stats.name === "Headquarters") {
             owner.playerInfo!.active = false;
-            doubleIt((i, j) => ret[i][j].push({event: "hq-death", params: [[...this.owner]]}), 0, 2, 0, 2);
+            doubleIt((i, j) => ret[i][j].push({event: "hq-death", params: [[...this.owner]]}), 0, 0, 2, 2);
             // Possible game end
             if (!game.getPlayer([owner.team, 1 - owner.playerInfo!.self[1]]).playerInfo!.active) {
-                doubleIt((i, j) => ret[i][j].push({event: "game-end", params: [1 - owner.team]}), 0, 2, 0, 2);
+                doubleIt((i, j) => ret[i][j].push({event: "game-end", params: [1 - owner.team]}), 0, 0, 2, 2);
                 game.active = false;
                 game.onGameEnd();
             }
         }
-        
-        //doubleIt((i, j) => ret[i][j].push({event: "game-end", params: [1-game.getPlayer(this.owner).team]}), 0, 2, 0, 2);
+
         return ret;
         // There should be no more references to this unit so it can be garbage collected?
-    }
-    heal(game: GameState, amount: number): Events {
-        const ret = emptyPArr<SocketEvent>();
-        const healed = Math.min(amount, this.stats.maxHealth - this.health);
-        // Add possible ability triggers here
-        this.health += healed;
-        doubleIt((i, j)=>ret[i][j].push({event: "heal", params: [[...this.loc, amount]]},
-        {event: "stat-change", params: [[...this.loc, "health", healed]]}),0,0,2,2);
-        return ret;
-    }
-    modifyStats(game: GameState, stat: keyof BuildingStats, amount: number, modification: "set" | "change"): Events {
-        // For now, only modifications to stats, and only numerical modifications, are permitted
-        const ret = emptyPArr<SocketEvent>();
-        if (typeof this.stats[stat] === "number") (this.stats[stat] as number) = amount + (modification === "change" ? (this.stats[stat] as number) : 0);
-        doubleIt((i, j) => ret[i][j].push({event: "stat-change", params: [[...this.loc], stat, modification, amount]}), 0, 2, 0, 2);
-        if (this.health > this.stats.maxHealth) {
-            this.health = this.stats.maxHealth;
-            doubleIt((i, j) => ret[i][j].push({event: "stat-change", params: [[...this.loc], "health", "set", this.health]}), 0, 2, 0, 2);
-        }
-        return ret;
     }
 }
