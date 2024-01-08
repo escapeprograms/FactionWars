@@ -4,6 +4,7 @@ import { Unit } from "./unit.js";
 import { Building } from "./building.js";
 import { PlayerInfo } from "./player.js";
 
+export * from "./entity.js";
 export * from "./building.js";
 export * from "./unit.js";
 export * from "./card.js";
