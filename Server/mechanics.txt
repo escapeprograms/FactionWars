@@ -39,7 +39,10 @@ Buildings
     - Adjacent units contribute to building construction
     - At the end of each turn, build time ticks down by 1 for each adjacent unit by default (can be modified w/ keywords)
 
-Invisibility 
-- Invisible units are hidden and cannot be detected by 
+Invisibility (WIP!)
+ - Invisible units are hidden and cannot be detected by enemy players
+    - They are revealed when within one or two tiles of an enemy unit 
+ - If an invisible unit moves into detection range and kills the target, the unit isn't revealed
+ - A direction indicator will appear when damage is dealt by an unrevealed invisible unit showing the direction the attack came from 
       
       
