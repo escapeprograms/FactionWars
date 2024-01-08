@@ -49,12 +49,15 @@ class Building {
     public buildLeft: number; // Turns left for buildTime
     public active: boolean = false; // Whether the building is active or inactive (disactivated)
     public attacks = 0; // Number of times the building can attack this turn
+    public activeUses: number[] = []; // # of uses left this turn for each of the actives
     constructor(game: GameState, loc: Coordinate, stats: BuildingStats, player: PlayerId) {
         this.loc = loc;
         this.stats = stats;
         this.owner = player;
         this.health = stats.maxHealth;
         this.buildLeft = stats.buildTime;
+        // TODO: Add actives and passives to buildings
+        //for (let i = 0; i < stats.actives.length; i++) this.activeUses.push(0);
         // Note: Manual activation needed
     }
     // Takes in the GameState

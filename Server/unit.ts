@@ -65,12 +65,14 @@ class Unit {
     public steps = 0; // # of steps available
     public moves = 0; // # of times left the player can move the unit
     public attacks = 0; // # of times left the unit can attack
+    public activeUses: number[] = []; // # of uses left this turn for each of the actives
     // Add team and/or faction property?
     constructor(loc: Coordinate, stats: UnitStats, player: PlayerId) {
         this.loc = loc;
         this.stats = stats;
         this.owner = player;
         this.health = stats.maxHealth;
+        for (let i = 0; i < stats.actives.length; i++) this.activeUses.push(0);
     }
     startTurn(): PlayerArr<SocketEvent[]> {
         // Do start turn stuff here, if any
