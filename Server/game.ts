@@ -88,7 +88,7 @@ class GameState {
         if (!this.field[x][y].occupant) {
             this.field[x][y].occupy([x, y], "unit");
             this.getPlayer(owner).playerInfo.units.push([x, y]);
-            const u = new Unit([x, y], unit, owner);
+            const u = new Unit(this, [x, y], unit, owner);
             this.units.push(u);
             doubleIt((i, j) => ret[i][j].push({event: "unit-spawn", params: [[...owner], [x, y], u]}), 0, 0, 2, 2);
         }
@@ -117,7 +117,7 @@ class GameState {
 
         // Activate end of turn effects, as applicable
         this.buildings.forEach(b=>concatEvents(ret, b.endTurn(this)));
-        this.units.forEach(u=>concatEvents(ret, u.endTurn()));
+        this.units.forEach(u=>concatEvents(ret, u.endTurn(this)));
         this.turn = 1 - this.turn;
 
         return ret;
@@ -130,7 +130,7 @@ class GameState {
 
         // Activate start of turn effects, as applicable
         this.buildings.forEach(b=>concatEvents(ret, b.startTurn(this)));
-        this.units.forEach(u=>concatEvents(ret, u.startTurn()));
+        this.units.forEach(u=>concatEvents(ret, u.startTurn(this)));
 
         // Players draw a card at the start of their turn
         this.players[this.turn].forEach(p => concatEvents(ret, p.playerInfo.draw()));

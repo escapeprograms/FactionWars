@@ -1,35 +1,23 @@
-import { Coordinate, Faction, PlayerId, PlayerArr, emptyPArr, SocketEvent, Events, Building, GameState, JsonEffect, Target } from "./types.js";
+import { Coordinate, Faction, PlayerId, PlayerArr, emptyPArr, SocketEvent, Events, Building, GameState, JsonActiveAbility, ActiveAbility, processData, EntityStats, Entity } from "./types.js";
 import { arrEqual, concatEvents, dist, doubleIt } from "./utility.js";
 import { withinRadiusInBounds } from "../Client/functions.js";
 import u from "./../Client/units.json" assert {type: "json"};
 
 export {Unit, UnitStats, units};
 
-// Add default values to units
-for (let key in u) {
-    const unit = (u as {[key: string]: JsonUnit})[key];
-    if (!unit["actives"]) unit["actives"] = [];
-    else unit.actives.forEach(ability => {
-        if (ability.uses === undefined) ability.uses = 1;
-        ability.effects.forEach(effect => {
-            if (!effect.modifiers) effect.modifiers = {};
-        });
-    });
-    if (!unit["passives"]) unit["passives"] = [];
-    if (!unit["attributes"]) unit["attributes"] = [];
-    if (!unit["splash"]) unit["splash"] = 0;
+const defaults = {
+    "splash": 0,
+    "actives": [{
+        "uses": 1,
+        "effects": [{
+            "modifiers": {}
+        }]
+    }],
+    "passives": [],
+    "attributes": [],
 }
+processData(u, defaults);
 const units = (u as {[key: string]: JsonUnit}) as {[key: string]: UnitStats & {faction: Faction}};
-
-interface JsonActiveAbility {
-    name: string,
-    targets: Target[],
-    effects: JsonEffect[],
-    uses?: number // Uses per turn
-}
-interface ActiveAbility extends JsonActiveAbility {
-    uses: number;
-} 
 
 type JsonUnit = {
     name: string;
@@ -44,47 +32,26 @@ type JsonUnit = {
     attributes?: string[]; // Could potentially make a new type or enum for this
 }
 
-type UnitStats = {
-    // Contains the stats of a unit
-    name: string;
-    maxHealth: number;
-    damage: number; // Attack damage
+interface UnitStats extends EntityStats {
     speed: number;
-    range: number; // 1 = melee
-    splash: number; // Splash radius in tiles, 0 for melee
-    actives: ActiveAbility[];
-    passives: string[];
-    attributes: string[]; // Could potentially make a new type or enum for this
 }
 
-class Unit {
-    public loc: Coordinate;
-    public stats: UnitStats;
-    public owner: PlayerId; // [team, number] of player
-    public health: number; // Current health
+class Unit extends Entity{
+    public stats: UnitStats
     public steps = 0; // # of steps available
     public moves = 0; // # of times left the player can move the unit
-    public attacks = 0; // # of times left the unit can attack
-    public activeUses: number[] = []; // # of uses left this turn for each of the actives
-    // Add team and/or faction property?
-    constructor(loc: Coordinate, stats: UnitStats, player: PlayerId) {
-        this.loc = loc;
-        this.stats = stats;
-        this.owner = player;
-        this.health = stats.maxHealth;
+    constructor(game: GameState, loc: Coordinate, stats: UnitStats, owner: PlayerId) {
+        super(game, loc, stats, owner);
+        this.stats = stats; // Is there an easier way where this line isn't needed?
         for (let i = 0; i < stats.actives.length; i++) this.activeUses.push(0);
     }
-    startTurn(): PlayerArr<SocketEvent[]> {
+    startTurn(game: GameState): PlayerArr<SocketEvent[]> {
         // Do start turn stuff here, if any
         this.steps = this.stats.speed;
         this.moves = 1;
-        this.attacks = 1;
-        return emptyPArr();
+        return super.startTurn(game);
     }
-    endTurn(): PlayerArr<SocketEvent[]> {
-        // Do end turn stuff here, if any
-        return emptyPArr();
-    }
+    //endTurn() // Does nothing, inherited from Entity
     move(game: GameState, steps: Coordinate[]): PlayerArr<SocketEvent[]> {
         const ret: PlayerArr<SocketEvent[]> = emptyPArr();
         if (this.moves < 1) return ret;
@@ -112,32 +79,6 @@ class Unit {
         }
         return ret;
     }
-    attack(game: GameState, target: Coordinate): Events {
-        const ret = emptyPArr<SocketEvent>();
-        if (this.attacks < 1) return ret; // Out of attacks
-        if (dist(this.loc, target) > this.stats.range || arrEqual(this.loc, target)) return ret; // Out of range / Cannot attack self
-        if (!game.sight(this.loc, target)) return ret; // Cannot see target
-        if (this.stats.splash <= 0 && !game.getTile(target).occupant) return ret; // Non-splashers cannot attack empty tile
-        doubleIt((i, j) => ret[i][j].push({event: "attack", params: [[...this.loc], [...target]]}), 0, 2, 0, 2);
-        // Eventually add special effects as needed
-        // NOTE: The code does not check for friendly fire!
-        // Will have to adjust victim finding if field ever becomes non-square
-        let victim;
-        (withinRadiusInBounds(target, this.stats.splash, 0, 0, game.fieldSize-1, game.fieldSize-1) as Coordinate[]).forEach(v => {
-            if (victim = game.getOccupant(v) as Unit | Building | null) concatEvents(ret, victim.takeDamage(game, this.stats.damage));
-        });
-        
-        this.attacks--;
-        return ret;
-    }
-    takeDamage(game: GameState, damage: number): Events {
-        // Eventually implement special abilities as necessary
-        const ret = emptyPArr<SocketEvent>();
-        this.health -= damage;
-        doubleIt((i, j) => ret[i][j].push({event: "took-damage", params: [[...this.loc], damage]}), 0, 2, 0, 2);
-        if (this.health <= 0) concatEvents(ret, this.die(game));
-        return ret;
-    }
     die(game: GameState): Events {
         // Eventually, implement on death effects (if any)
         // Remove from unit list
@@ -152,30 +93,8 @@ class Unit {
         // Remove from tile
         game.getTile(this.loc).leave();
         // Return events
-        const ret = emptyPArr<SocketEvent>();
-        doubleIt((i, j) => ret[i][j].push({event: "death", params: [[...this.loc]]}), 0, 2, 0, 2);
-        return ret;
+        return super.die(game);
         // There should be no more references to this unit so it can be garbage collected?
-    }
-    heal(game: GameState, amount: number): Events {
-        const ret = emptyPArr<SocketEvent>();
-        const healed = Math.min(amount, this.stats.maxHealth - this.health);
-        // Add possible ability triggers here
-        this.health += healed;
-        doubleIt((i, j)=>ret[i][j].push({event: "heal", params: [[...this.loc, amount]]},
-        {event: "stat-change", params: [[...this.loc, "health", healed]]}),0,0,2,2);
-        return ret;
-    }
-    modifyStats(game: GameState, stat: keyof UnitStats, amount: number, modification: "set" | "change"): Events {
-        // For now, only modifications to stats, and only numerical modifications, are permitted
-        const ret = emptyPArr<SocketEvent>();
-        if (typeof this.stats[stat] === "number") (this.stats[stat] as number) = amount + (modification === "change" ? (this.stats[stat] as number) : 0);
-        doubleIt((i, j) => ret[i][j].push({event: "stat-change", params: [[...this.loc], stat, modification, amount]}), 0, 2, 0, 2);
-        if (this.health > this.stats.maxHealth) {
-            this.health = this.stats.maxHealth;
-            doubleIt((i, j) => ret[i][j].push({event: "stat-change", params: [[...this.loc], "health", "set", this.health]}), 0, 2, 0, 2);
-        }
-        return ret;
     }
     isAdj(loc: Coordinate): boolean {
         return loc[0] % 1 === 0 && loc[1] % 1 === 0 && (Math.abs(loc[0] - this.loc[0]) + Math.abs(loc[1] - this.loc[1]) === 1);
