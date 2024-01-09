@@ -4,7 +4,7 @@ import { arrEqual, concatEvents, deepCopy, doubleIt, isCoord, isIntInRange } fro
 
 import c from "./../Client/cards.json" assert {type: "json"};
 
-export { Card, Deck, play, Effect, JsonEffect, Target};
+export { Card, Deck, play, Effect, JsonEffect, Target, effects};
 
 class Deck {
     private cards: Card[] = [];
@@ -125,9 +125,7 @@ function play(game: GameState, owner: PlayerId, index: number, targets: {[key: s
     const card = player.cards[index];
     const ret = emptyPArr<SocketEvent>();
     // Validate targets && costs
-    if (card.cost <= player.money && 
-        card.targets.every(t => validateTarget[t.type](game, targets[t.name], owner) && 
-        Object.keys(t.properties).every(p => validateProperties[p](game, targets[t.name], owner, t.properties[p])))) {
+    if (card.cost <= player.money && checkTargets(game, owner, card.targets, targets)) {
         // Decrement money
         if (card.cost !== 0) {
             player.money -= card.cost;
@@ -149,6 +147,11 @@ function replaceVars(obj: {[key: string]: any}, vars: {[key: string]: any}) {
         if (typeof(val === "string") && val[0] === "$") copy[key] = vars[val];
     }
     return copy;
+}
+
+function checkTargets(game: GameState, owner: PlayerId, reqs: Target[], targets: {[key: string]: any}): boolean {
+    return reqs.every(t => validateTarget[t.type](game, targets[t.name], owner) && 
+        Object.keys(t.properties).every(p => validateProperties[p](game, targets[t.name], owner, t.properties[p])))
 }
 
 const effects: {[key: string]: (game: GameState, owner: PlayerId, card: Card, params: {[key: string]: any}) => Events} = {
