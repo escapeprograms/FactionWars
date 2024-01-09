@@ -1,6 +1,6 @@
 import { withinRadiusInBounds } from "../Client/functions.js";
-import { Coordinate, Events, GameState, JsonEffect, PlayerId, SocketEvent, Target, emptyPArr } from "./types.js";
-import { arrEqual, concatEvents, dist, doubleIt } from "./utility.js";
+import { Coordinate, Effect, Events, GameState, JsonEffect, PlayerId, SocketEvent, Target, checkTargets, doEffects, emptyPArr } from "./types.js";
+import { arrEqual, concatEvents, dist, doubleIt, isIntInRange } from "./utility.js";
 
 export { ActiveAbility, JsonActiveAbility, Entity, EntityStats, processData };
 
@@ -12,6 +12,7 @@ interface JsonActiveAbility {
 }
 
 interface ActiveAbility extends JsonActiveAbility {
+    effects: Effect[];
     uses: number;
 } 
 
@@ -44,6 +45,7 @@ class Entity {
         // Currently, entities that don't do damage cannot attack
         // No client event is sent for this
         this.attacks = this.stats.damage > 0 ? 1 : 0;
+        this.activeUses = this.activeUses.map(_ => 1);
         return emptyPArr();
     }
     endTurn(game: GameState): Events {
@@ -72,13 +74,13 @@ class Entity {
         // Eventually implement special abilities as necessary
         const ret = emptyPArr<SocketEvent>();
         this.health -= damage;
-        doubleIt((i, j) => ret[i][j].push({event: "took-damage", params: [[...this.loc], damage]}), 0, 2, 0, 2);
+        doubleIt((i, j) => ret[i][j].push({event: "took-damage", params: [[...this.loc], damage]}), 0, 0, 2, 2);
         if (this.health <= 0) concatEvents(ret, this.die(game));
         return ret;
     }
     die(game: GameState): Events {
         const ret = emptyPArr<SocketEvent>();
-        doubleIt((i, j) => ret[i][j].push({event: "death", params: [[...this.loc]]}), 0, 2, 0, 2);
+        doubleIt((i, j) => ret[i][j].push({event: "death", params: [[...this.loc]]}), 0, 0, 2, 2);
         return ret;
     }
     heal(game: GameState, amount: number): Events {
@@ -94,11 +96,25 @@ class Entity {
         // For now, only modifications to stats, and only numerical modifications, are permitted
         const ret = emptyPArr<SocketEvent>();
         if (typeof this.stats[stat] === "number") (this.stats[stat] as number) = amount + (modification === "change" ? (this.stats[stat] as number) : 0);
-        doubleIt((i, j) => ret[i][j].push({event: "stat-change", params: [[...this.loc], stat, modification, amount]}), 0, 2, 0, 2);
+        doubleIt((i, j) => ret[i][j].push({event: "stat-change", params: [[...this.loc], stat, modification, amount]}), 0, 0, 2, 2);
         if (this.health > this.stats.maxHealth) {
             this.health = this.stats.maxHealth;
-            doubleIt((i, j) => ret[i][j].push({event: "stat-change", params: [[...this.loc], "health", "set", this.health]}), 0, 2, 0, 2);
+            doubleIt((i, j) => ret[i][j].push({event: "stat-change", params: [[...this.loc], "health", "set", this.health]}), 0, 0, 2, 2);
         }
+        return ret;
+    }
+    // Activate active ability
+    useActive(game: GameState, targets: {[key: string]: any}, index: number): Events {
+        const ret = emptyPArr<SocketEvent>();
+        if (!isIntInRange(index, 0, this.stats.actives.length - 1)) return ret; // Ability index invalid
+        const ability = this.stats.actives[index];
+        if (this.activeUses[index] < 1) return ret;
+        if (!checkTargets(game, this.owner, ability.targets, targets)) return ret; // Given targets invalid
+
+        this.activeUses[index]--;
+        doubleIt((i, j) => ret[i][j].push({event: "ability-use", params: [[...this.loc], index]}), 0, 0, 2, 2);
+        concatEvents(ret, doEffects(game, this.owner, ability.effects, targets));
+
         return ret;
     }
 }
@@ -114,7 +130,6 @@ function processData(data: {[key: string]: {[key: string]: any}}, defaults: {[ke
 
 // defaults should match type of obj
 // If obj is array, then defaults should be an array with a single element
-//TODO, then integrate with unit.ts and building.ts
 function processItem(obj: {[key: string]: any}, defaults: {[key: string]: any}): void;
 function processItem(obj: any[], defaults: any[]): void;
 function processItem(obj: {[key: string]: any} | any[], defaults: {[key: string]: any} | any[]) {
