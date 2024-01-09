@@ -313,6 +313,15 @@ io.on("connection", (socket: Socket) => {
             sendEvents(game.play((sock as SocketInfoGame).info.player.playerInfo.self, cardIndex, targets), game);
         }
     });
+    socket.on("useActive", (activator, abilityIndex, targets) => {
+        const sock = socketTable[socket.id];
+        if (checkState(sock, SocketState.Game)) {
+            if (!isCoord(activator) || typeof abilityIndex != "number" || typeof targets != "object") return;
+            const game = (sock as SocketInfoGame).info.lobby.gameInfo;
+            if (!game.active) return;
+            sendEvents(game.useActive((sock as SocketInfoGame).info.player.playerInfo.self, activator, abilityIndex, targets), game);
+        }
+    });
     socket.on("goto", (state) => {
         const sock = socketTable[socket.id];
         if (checkState(sock, SocketState.GameEnd)) {
@@ -326,7 +335,6 @@ io.on("connection", (socket: Socket) => {
             }
         }
     });
-    // TODO: Handle special actions (unit/building activations)
 })
 
 server.on("error", (e: string) => {

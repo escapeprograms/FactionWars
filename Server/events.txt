@@ -9,6 +9,7 @@ change-end-status (in game, ends/unends your turn, send true for end and false f
 move-unit (in game, send unit Coordinate and steps array)
 attack (in game, send source and target Coordinates)
 play (in game, send card index and targets object)
+useActive (in game, send activator Coordinate, ability index, targets object)
 goto (gameEnd, send "lobby" or "menu" to go to lobby/menu)
 
 play card (subcases: operation, building a building, deploying a unit)
@@ -54,3 +55,4 @@ turn-start (tells client a new turn has started)
 turn-end (tells client the current turn has ended)
 heal (gives target, amount, tells client target healed by amount)
 stat-change (gives target, stat, type, amount, tells client target's stat was changed by / set to amount)
+ability-use (gives activator Coordinate and ability index, tells client activator activated the ability)
