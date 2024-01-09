@@ -4,7 +4,7 @@ import { arrEqual, concatEvents, deepCopy, doubleIt, isCoord, isIntInRange } fro
 
 import c from "./../Client/cards.json" assert {type: "json"};
 
-export { Card, Deck, play, Effect, JsonEffect, Target, effects};
+export { Card, Deck, play, Effect, JsonEffect, Target, effects, checkTargets, doEffects};
 
 class Deck {
     private cards: Card[] = [];
@@ -132,10 +132,17 @@ function play(game: GameState, owner: PlayerId, index: number, targets: {[key: s
             doubleIt((i, j)=>ret[i][j].push({event: "change-money", params: [[...owner], -card.cost]}), 0, 0, 2, 2);
         }
         // Play effects
-        card.effects.forEach(e => concatEvents(ret, effects[e.effect](game, owner, card, replaceVars(e, targets))));
+        concatEvents(ret, doEffects(game, owner, card.effects, targets));
         // Discard card
         concatEvents(ret, player.discard(index)); // May need to modify later if we have onDiscard effects
     }
+    return ret;
+}
+
+// Does not validate targets
+function doEffects(game: GameState, owner: PlayerId, effectArr: Effect[], targets: {[key: string]: any}): Events {
+    const ret = emptyPArr<SocketEvent>();
+    effectArr.forEach(e => concatEvents(ret, effects[e.effect](game, owner, replaceVars(e, targets), effectArr)));
     return ret;
 }
 
@@ -154,26 +161,26 @@ function checkTargets(game: GameState, owner: PlayerId, reqs: Target[], targets:
         Object.keys(t.properties).every(p => validateProperties[p](game, targets[t.name], owner, t.properties[p])))
 }
 
-const effects: {[key: string]: (game: GameState, owner: PlayerId, card: Card, params: {[key: string]: any}) => Events} = {
-    "gain": (game, owner, card, params) => {
+const effects: {[key: string]: (game: GameState, owner: PlayerId, params: {[key: string]: any}, effectArr: Effect[]) => Events} = {
+    "gain": (game, owner, params, _) => {
         // Assume gain is money for now
         const ret = emptyPArr<SocketEvent>();
         game.getPlayer(params.target).playerInfo.money += params.quantity
         doubleIt((i, j)=>ret[i][j].push({event: "change-money", params: [[...params.target], params.quantity]}), 0, 0, 2, 2);
         return ret; 
     },
-    "heal": (game, owner, card, params) => {
+    "heal": (game, owner, params, _) => {
         const ret = emptyPArr<SocketEvent>();
-        const target = game.getOccupant(params.target)
+        const target = game.getOccupant(params.target);
         if (target) {
             //concatEvents(ret, target.heal(game, params.amount + ("heal" in params.modifiers ? params.modifiers.heal : 0)));
             return target.heal(game, params.amount + ("heal" in params.modifiers ? params.modifiers.heal : 0));
         }
         return ret;
     },
-    "modify-effect": (game, owner, card, params) => {
+    "modify-effect": (game, owner, params, effectArr) => {
         const ret = emptyPArr<SocketEvent>();
-        const effect = card.effects[params.on]; // Index of the effect
+        const effect = effectArr[params.on]; // Index of the effect
         if (effect === undefined) return ret;
         if (params.type in effect.modifiers) {
             // Modification is either "set" or "change"
@@ -184,14 +191,14 @@ const effects: {[key: string]: (game: GameState, owner: PlayerId, card: Card, pa
         }
         return ret;
     },
-    "modify-stats": (game, owner, card, params) => {
+    "modify-stats": (game, owner, params, card) => {
         const target = game.getOccupant(params.target);
         if (target) {
             return target.modifyStats(game, params.stat, params.amount, params.type);
         }
         return emptyPArr<SocketEvent>();
     },
-    "spawn": (game: GameState, owner: PlayerId, card, params: {[key: string]: any}) => {
+    "spawn": (game: GameState, owner: PlayerId, params: {[key: string]: any}, card) => {
         const type = params.type as string; // Building or Unit
         const copy = deepCopy((type === "B" ? buildings : units)[params.id]);
         if ("modifiers" in params) {

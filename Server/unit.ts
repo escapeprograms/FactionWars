@@ -65,7 +65,7 @@ class Unit extends Entity{
                 // TODO: Change later with invisible unit detection and other interrupts
                 // And also later implement the differences in what events are sent
                 const loc = this.loc;
-                doubleIt((i, j) => ret[i][j].push({event: "move", params: [[...loc], [...step]]}), 0, 2, 0, 2);
+                doubleIt((i, j) => ret[i][j].push({event: "move", params: [[...loc], [...step]]}), 0, 0, 2, 2);
                 this.loc = step;
                 // Add in invisible unit detection things here
                 // Adjust name in references to this unit (owner.unit, for instance)
