@@ -266,6 +266,13 @@ class GameState {
         return p.playerInfo.play(this, cardIndex, targets);
     }
 
+    useActive(player: PlayerId, activator: Coordinate, index: number, targets: {[key: string]: any}): Events {
+        const p = this.getPlayer(player);
+        const a = this.getOccupant(activator);
+        if (!this.canAction(p)) return emptyPArr();
+        if (!a || !arrEqual(a.owner, player)) return emptyPArr();
+        return a.useActive(this, targets, index);
+    }
 }
 
 class Tile {
