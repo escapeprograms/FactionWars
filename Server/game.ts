@@ -54,11 +54,9 @@ class GameState {
         // Initialize deck and hands
         this.players.forEach(t => t.forEach(p => {
             // Eventually, make actual decks
-            // Current deck is 4x Bank, 4x Power Plant, 5x Footsoldier
             const deck = p.playerInfo.deck;
-            deck.add(cards["footsoldier"] as Card, 5);
-            deck.add(cards["power plant"] as Card, 4);
-            deck.add(cards["bank"] as Card, 4);
+            Object.keys(startingDecks[p.faction]).forEach(c => deck.add(cards[c], startingDecks[p.faction][c]));
+            Object.keys(startingDecks["N"]).forEach(c => deck.add(cards[c], startingDecks["N"][c]));
             deck.shuffle();
             // Currently, players start with 5 cards in hand
             for (let i = 0; i < 5; i++) p.playerInfo.draw();
@@ -292,5 +290,28 @@ class Tile {
     leave() {
         this.occupant = null;
         this.occupantType = null;
+    }
+}
+
+// For now, starting decks are set for each faction
+const startingDecks: {[key: string]: {[key: string]: number}} = {
+    "T": {
+
+    },
+    "M": {
+        "sentry turret": 1
+    },
+    "S": {
+
+    },
+    "A": {
+        "prototype": 1
+    },
+    // Included in all decks
+    "N": {
+        "footsoldier": 5,
+        "power plant": 4,
+        "bank": 4,
+        "war funds": 1
     }
 }

@@ -23,8 +23,6 @@ const defaults: {[key: string]: any} = {
     attributes: [],
 }
 
-// TODO: Add active and passive abilities
-// TODO: Do defaults in active and passive abilities
 // TODO: Do HQ's Industrial Might
 processData(b, defaults);
 const buildings = (b as {[key: string]: JsonBuilding}) as {[key: string]: BuildingStats & {faction: Faction}}; // To establish type
@@ -62,8 +60,6 @@ class Building extends Entity {
         super(game, loc, stats, owner);
         this.stats = stats;
         this.buildLeft = stats.buildTime;
-        // TODO: Add actives and passives to buildings
-        //for (let i = 0; i < stats.actives.length; i++) this.activeUses.push(0);
         // Note: Manual activation needed
     }
     startTurn(game: GameState): PlayerArr<SocketEvent[]> {
