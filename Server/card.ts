@@ -224,7 +224,7 @@ const validateTarget: {[key:string]: (game: GameState, target: any, owner: Playe
 };
 
 const validateProperties: {[key:string]: (game: GameState, target: any, owner: PlayerId, value: any) => boolean} = {
-    // For tiles only
+    // For tiles
     "buildable": (game, target: Coordinate, owner, size: number) => {
         if (typeof(size) !== "number" || !target.every((x: number)=>x+size<game.fieldSize)) return false;
         // Ensure space is vacant
@@ -235,7 +235,7 @@ const validateProperties: {[key:string]: (game: GameState, target: any, owner: P
         adj(game, target, size).some(c => game.getTile(c)?.occupantType === "unit" && arrEqual(game.getUnit(c)!.owner, owner));
         return valid;
     },
-    "empty": (game, target) => game.getTile(target).occupant === null,
+    "empty": (game, target: Coordinate) => game.getTile(target).occupant === null,
     "spawnable": (game, target: Coordinate, owner) => !game.getTile(target).occupant && 
         adj(game, target).some(c => game.getTile(c)?.occupantType === "building" && arrEqual(game.getBuilding(c)!.owner, owner)),
     // For buildings or units

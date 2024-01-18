@@ -89,6 +89,14 @@ Units
     - Units may not target themselves with their own attacks
     - Currently, friendly fire is otherwise permitted
 
+Buildings
+ - Events
+    - building-spawn: When the Client receives a building-spawn event, it should check to see whether or not its buildLeft is 0.
+      If so, the building is spawned built and should be treated accordingly.
+      If not, the building is spawned under construction and should be treated accordingly (including visuals).
+    - build-tick: When the Client receives a build-tick event, it should check to see whether or not the building's buildLeft is 0.
+      If so, the building has finished construction. There is no explicit event for construction completion. 
+
 Cards
  - Players start the game with 5 Cards
  - Players draw 1 card per turn

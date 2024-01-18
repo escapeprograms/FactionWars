@@ -60,6 +60,7 @@ class Building extends Entity {
         super(game, loc, stats, owner);
         this.stats = stats;
         this.buildLeft = stats.buildTime;
+        this.health = Math.ceil(this.stats.maxHealth / (this.stats.buildTime + 1)); // Buildings start with 1/(buildTime + 1) of their health
         // Note: Manual activation needed
     }
     startTurn(game: GameState): PlayerArr<SocketEvent[]> {
@@ -110,12 +111,17 @@ class Building extends Entity {
                 }
             }
             
+            if (build > this.buildLeft) build = this.buildLeft;
+            // There might be a way to simplify this? Since I'm using ceil I don't want to accidentally end up with extra health
+            let healthInc = Math.ceil((this.stats.buildTime - this.buildLeft + build + 1) * this.stats.maxHealth / (this.stats.buildTime + 1))
+                - Math.ceil((this.stats.buildTime - this.buildLeft + 1) * this.stats.maxHealth / (this.stats.buildTime + 1));
+            if (healthInc > this.stats.maxHealth - this.health) healthInc = this.stats.maxHealth - this.health;
+            this.buildLeft -= build;
+            this.health += healthInc;
             // Do we want to send all the build ticks or just enough so that it reaches 0?
-            doubleIt((i, j) => ret[i][j].push({event: "build-tick", params: [[...this.loc], build]}), 0, 0, 2, 2);
-            if ((this.buildLeft -= build) <= 0) {
-                this.buildLeft = 0;
-                concatEvents(ret, this.activate(game));
-            }
+            // Currently sending just enough so that it reaches 0
+            doubleIt((i, j) => ret[i][j].push({event: "build-tick", params: [[...this.loc], build, healthInc]}), 0, 0, 2, 2);
+            if (this.buildLeft === 0) concatEvents(ret, this.activate(game));
         }
         // Maybe more stuff here, such as end of turn effects, as applicable
         return ret;
