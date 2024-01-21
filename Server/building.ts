@@ -31,14 +31,14 @@ type JsonBuilding = {
     name: string;
     faction: Faction;
     maxHealth: number;
-    damage: number; // Attack damage
+    damage?: number; // Attack damage
+    splash?: number; // Splash radius in tiles, 0 for melee
     range?: number; // 1 = melee
     upkeep?: number; // amount of energy required for upkeep
     moneyGen?: number; // Money generated at the start of each turn
     energyGen?: number; // Energy generated at the start of each turn
     buildTime: number; 
     size: number; // Buildings are assumed to be square
-    splash?: number; // Splash radius in tiles, 0 for melee
     actives?: JsonActiveAbility[];
     passives?: string[];
     attributes?: string[]; // Could potentially make a new type or enum for this

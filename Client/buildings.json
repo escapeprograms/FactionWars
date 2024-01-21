@@ -88,6 +88,19 @@
         "description": "Cheap and tanky."
     },
 
+    "popup turret": {
+        "name": "Popup Turret",
+        "faction": "M",
+        "maxHealth": 5,
+        "damage": 3,
+        "splash": 0.5,
+        "range": 4.5,
+        "upkeep": 1,
+        "buildTime": 0,
+        "size": 1,
+        "description": "A small building that can be instantly placed. Weak, but cheap. Not sure if we want a decimal for range. Not sure if upkeep should be 1 or 2."
+    },
+
     "sentry turret": {
         "name":"Sentry Turret",
         "faction": "M",

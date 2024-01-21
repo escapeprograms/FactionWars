@@ -67,6 +67,12 @@
         "description": "A sturdy Metropolis turret."
     },
 
+    "popup turret": {
+        "cost": 3,
+        "cardType": "B",
+        "description": "A small, cheap, instant-build building. Not sure if price should be 3 or 4."
+    },
+
     "footsoldier": {
         "name": "Footsoldier",
         "faction": "N",
