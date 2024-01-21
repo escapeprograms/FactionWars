@@ -42,7 +42,8 @@
             "type": "B",
             "id": "power plant",
             "loc": "$loc"
-        }]
+        }],
+        "description": "A basic energy generator."
     },
 
     "bank": {
@@ -56,12 +57,14 @@
             "type": "B",
             "id": "bank",
             "loc": "$loc"
-        }]
+        }],
+        "description": "A basic money generator."
     },
 
     "sentry turret": {
         "cost": 4,
-        "cardType": "B"
+        "cardType": "B",
+        "description": "A sturdy Metropolis turret."
     },
 
     "footsoldier": {
@@ -75,7 +78,8 @@
             "type": "U",
             "id": "footsoldier",
             "loc": "$loc"
-        }]
+        }],
+        "description": "A basic unit."
     },
 
     "prototype": {
@@ -85,7 +89,8 @@
             {"effect": "spawn", "type": "U", "id": "prototype", "loc": "$loc"}, 
             {"effect": "modify-effect", "modification": "change", "on": 0, "type": "attack", "amount": 1},
             {"effect": "modify-effect", "modification": "change", "on": 0, "type": "health", "amount": 1}
-        ]
+        ],
+        "description": "Starts out weak, but gets stronger every time you play it."
     },
 
     "war funds": {
@@ -99,7 +104,8 @@
             "type": "money",
             "quantity": 3,
             "target": "self"
-        }]
+        }],
+        "description": "A money gain operation. Probably not balanced as is, and might not make it to the final version of the game."
     }
 
 }

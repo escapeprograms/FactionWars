@@ -22,7 +22,8 @@
         "speed": 4,
         "actives": [],
         "passives": [],
-        "attributes": []
+        "attributes": [],
+        "description": "A basic unit."
     },
 
     "prototype": {
@@ -35,7 +36,8 @@
         "speed": 3,
         "actives": [],
         "passives": [],
-        "attributes": []
+        "attributes": [],
+        "description": "Starts out weak, but gets stronger every time you play it."
     },
 
     "engineer": {
@@ -52,6 +54,7 @@
                 {"effect": "modify-stats", "type": "change", "amount": 1, "stat": "maxHealth", "target": "$building"},
                 {"effect": "heal", "amount": 3, "target": "$building"}
             ]
-        }]
+        }],
+        "description": "Can repair & buff buildings, and also builds twice as fast as typical units."
     } 
 }

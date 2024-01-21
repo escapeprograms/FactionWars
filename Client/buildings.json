@@ -30,7 +30,8 @@
         "size": 3,
         "actives": [],
         "passives": [],
-        "attributes": ["hq"]
+        "attributes": ["hq"],
+        "description": "The most important building. Protect it at all costs. Lose it and you are out of combat."
     },
 
     "bank": {
@@ -47,7 +48,8 @@
         "size": 2,
         "actives": [],
         "passives": [],
-        "attributes": []
+        "attributes": [],
+        "description": "A basic money generator."
     },
 
     "power plant": {
@@ -64,7 +66,8 @@
         "size": 2,
         "actives": [],
         "passives": [],
-        "attributes": []
+        "attributes": [],
+        "description": "A basic energy generator."
     },
 
     "wall": {
@@ -81,7 +84,8 @@
         "size": 2,
         "actives": [],
         "passives": [],
-        "attributes": ["wall"]
+        "attributes": ["wall"],
+        "description": "Cheap and tanky."
     },
 
     "sentry turret": {
@@ -93,11 +97,12 @@
         "range": 15,
         "upkeep": 2,
         "moneyGen": 0,
-        "energyGen": 6,
+        "energyGen": 0,
         "buildTime": 3,
         "size": 2,
         "actives": [],
         "passives": [],
-        "attributes": []
+        "attributes": [],
+        "description": "A sturdy Metropolis turret."
     }
 }
