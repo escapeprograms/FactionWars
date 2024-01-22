@@ -55,8 +55,8 @@ class GameState {
         this.players.forEach(t => t.forEach(p => {
             // Eventually, make actual decks
             const deck = p.playerInfo.deck;
-            Object.keys(startingDecks[p.faction]).forEach(c => deck.add(cards[c], startingDecks[p.faction][c]));
-            Object.keys(startingDecks["N"]).forEach(c => deck.add(cards[c], startingDecks["N"][c]));
+            Object.keys(startingDecks[p.faction]).forEach(c => deck.add(cards[c], startingDecks[p.faction][c], true));
+            Object.keys(startingDecks["N"]).forEach(c => deck.add(cards[c], startingDecks["N"][c], true));
             deck.shuffle();
             // Currently, players start with 5 cards in hand
             for (let i = 0; i < 5; i++) p.playerInfo.draw();

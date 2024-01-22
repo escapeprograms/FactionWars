@@ -1,5 +1,5 @@
 import { withinRadiusInBounds } from "../Client/functions.js";
-import { Coordinate, Effect, Events, GameState, PlayerId, SocketEvent, Target, checkTargets, doEffects, emptyPArr } from "./types.js";
+import { Building, Coordinate, Effect, Events, GameState, PlayerId, SocketEvent, Target, Unit, checkTargets, doEffects, emptyPArr } from "./types.js";
 import { arrEqual, concatEvents, dist, doubleIt, isIntInRange } from "./utility.js";
 
 export { ActiveAbility, JsonActiveAbility, Entity, EntityStats, processData };
@@ -64,9 +64,13 @@ class Entity {
         // Eventually special effects as needed
         // NOTE: The code does not check for friendly fire!
         // Will have to adjust victim finding if field ever becomes non-square
-        let victim;
+        let victim: Unit | Building | undefined | null;
+        const targeted: {[key: string]: boolean} = {};
         (withinRadiusInBounds(target, this.stats.splash, 0, 0, game.fieldSize-1, game.fieldSize-1) as Coordinate[]).forEach(v => {
-            if (victim = game.getOccupant(v)) concatEvents(ret, victim.takeDamage(game, this.stats.damage));
+            if ((victim = game.getOccupant(v)) && !targeted[victim.loc.toString()]) {
+                targeted[victim.toString()] = true;
+                concatEvents(ret, victim.takeDamage(game, this.stats.damage));
+            }
         });
         
         this.attacks--;
