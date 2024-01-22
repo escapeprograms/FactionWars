@@ -159,6 +159,9 @@ class Building extends Entity {
         }
         return ret;
     }
+    attack(game: GameState, target: Coordinate): Events {
+        return this.active ? super.attack(game, target) : emptyPArr();
+    }
     die(game: GameState): Events {
         const ret = emptyPArr<SocketEvent>();
         const owner = game.getPlayer(this.owner);
