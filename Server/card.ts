@@ -108,6 +108,7 @@ for (let key in tempCards) {
 export const cards = tempCards as {[key: string]: Card};
 
 interface Card {
+    objectType: "Card",
     id: string, // internal identifier, same as key in cards object
     name: string, // external name for card
     faction: Faction | "N", // Faction this belongs to, or "N" for Neutral

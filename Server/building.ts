@@ -53,6 +53,7 @@ interface BuildingStats extends EntityStats {
 }
 
 class Building extends Entity {
+    public objectType = "Building";
     public stats: BuildingStats;
     public buildLeft: number; // Turns left for buildTime
     public active: boolean = false; // Whether the building is active or inactive (disactivated)

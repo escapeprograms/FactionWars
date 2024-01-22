@@ -36,7 +36,8 @@ interface UnitStats extends EntityStats {
     speed: number;
 }
 
-class Unit extends Entity{
+class Unit extends Entity {
+    public objectType = "Unit";
     public stats: UnitStats
     public steps = 0; // # of steps available
     public moves = 0; // # of times left the player can move the unit

@@ -28,6 +28,7 @@ interface EntityStats {
 }
 
 class Entity {
+    public objectType: string = "Entity";
     public loc: Coordinate;
     public stats: EntityStats;
     public owner: PlayerId; // [team, number] of player
