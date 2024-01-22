@@ -1,10 +1,10 @@
-import { BuildingStats, CardType, Coordinate, Events, Faction, GameState, PlayerArr, PlayerId, SocketEvent, UnitStats, emptyPArr } from "../Server/types.js";
+import { BuildingStats, CardType, Coordinate, Entity, Events, Faction, GameState, PlayerArr, PlayerId, SocketEvent, UnitStats, emptyPArr, processData } from "../Server/types.js";
 import { buildings, units } from "../Server/types.js";
 import { arrEqual, concatEvents, deepCopy, doubleIt, isCoord, isIntInRange } from "../Server/utility.js";
 
 import c from "./../Client/cards.json" assert {type: "json"};
 
-export { Card, Deck, play, Effect, JsonEffect, Target, effects, checkTargets, doEffects};
+export { Card, Deck, play, Effect, Target, checkTargets, doEffects};
 
 class Deck {
     private cards: Card[] = [];
@@ -53,13 +53,6 @@ type Target = {
 
 type Effect = {
     effect: string, // name of the type of effect
-    modifiers: {[key: string]: any},
-    [key: string]: any
-}
-
-type JsonEffect = {
-    effect: string,
-    modifiers?: {[key: string]: any},
     [key: string]: any
 }
 
@@ -70,8 +63,9 @@ interface SpawnCard {
     cardType: CardType.Building | CardType.Unit;
     cost: number;
     targets?: Target[];
-    effects?: JsonEffect[];
+    effects?: Effect[];
     onDiscard?: Effect;
+    modifiers?: {[key: string]: any};
 }
 
 interface OpCard {
@@ -81,8 +75,9 @@ interface OpCard {
     cardType: CardType.Operation,
     cost: number,
     targets: Target[],
-    effects: JsonEffect[],
-    onDiscard?: Effect
+    effects: Effect[],
+    onDiscard?: Effect,
+    modifiers?: {[key: string]: any};
 }
 
 type JsonCard = SpawnCard | OpCard
@@ -90,6 +85,7 @@ type JsonCard = SpawnCard | OpCard
 const tempCards: {[key: string]: JsonCard} = c as {[key: string]: JsonCard};
 
 // Add in default properties
+// Can't use processData() because building/unit defaults pull form building/unit.json
 for (let key in tempCards) {
     const card = tempCards[key];
     const type = tempCards[key].cardType;
@@ -101,9 +97,7 @@ for (let key in tempCards) {
         if (!card["effects"]) card["effects"] = [{"effect": "spawn", "type": type, "id": key, "loc": "$loc"}];
         if (!card["targets"]) card["targets"] = [{"name": "$loc", "type": "tile", "properties": {[type === "B" ? "buildable" : "spawnable"]: true}}];
     }
-    for (let effect of card.effects!) {
-        if (!("modifiers" in effect)) effect.modifiers = {};
-    }
+    if (!("modifiers" in card)) card.modifiers = {};
 }
 export const cards = tempCards as {[key: string]: Card};
 
@@ -116,7 +110,8 @@ interface Card {
     cost: number, // cost in money
     targets: Target[],
     effects: Effect[],
-    onDiscard?: Effect
+    onDiscard?: Effect,
+    modifiers: {[key: string]: any}
 }
 
 
@@ -133,7 +128,7 @@ function play(game: GameState, owner: PlayerId, index: number, targets: {[key: s
             doubleIt((i, j)=>ret[i][j].push({event: "change-money", params: [[...owner], -card.cost]}), 0, 0, 2, 2);
         }
         // Play effects
-        concatEvents(ret, doEffects(game, owner, card.effects, targets));
+        concatEvents(ret, doEffects(game, owner, targets, card, ...card.effects));
         // Discard card
         concatEvents(ret, player.discard(index)); // May need to modify later if we have onDiscard effects
     }
@@ -141,9 +136,9 @@ function play(game: GameState, owner: PlayerId, index: number, targets: {[key: s
 }
 
 // Does not validate targets
-function doEffects(game: GameState, owner: PlayerId, effectArr: Effect[], targets: {[key: string]: any}): Events {
+function doEffects(game: GameState, owner: PlayerId, targets: {[key: string]: any}, self: Card | Entity, ...effectArr: Effect[]): Events {
     const ret = emptyPArr<SocketEvent>();
-    effectArr.forEach(e => concatEvents(ret, effects[e.effect](game, owner, replaceVars(e, targets), effectArr)));
+    effectArr.forEach(e => concatEvents(ret, effects[e.effect](game, owner, replaceVars(e, targets), self)));
     return ret;
 }
 
@@ -162,49 +157,61 @@ function checkTargets(game: GameState, owner: PlayerId, reqs: Target[], targets:
         Object.keys(t.properties).every(p => validateProperties[p](game, targets[t.name], owner, t.properties[p])))
 }
 
-const effects: {[key: string]: (game: GameState, owner: PlayerId, params: {[key: string]: any}, effectArr: Effect[]) => Events} = {
-    "gain": (game, owner, params, _) => {
+const effects: {[key: string]: (game: GameState, owner: PlayerId, params: {[key: string]: any}, self: Card | Entity) => Events} = {
+    "gain": (game, owner, params, self) => {
         // Assume gain is money for now
         const ret = emptyPArr<SocketEvent>();
         game.getPlayer(params.target).playerInfo.money += params.quantity
         doubleIt((i, j)=>ret[i][j].push({event: "change-money", params: [[...params.target], params.quantity]}), 0, 0, 2, 2);
         return ret; 
     },
-    "heal": (game, owner, params, _) => {
+    "heal": (game, owner, params, self) => {
         const ret = emptyPArr<SocketEvent>();
         const target = game.getOccupant(params.target);
         if (target) {
             //concatEvents(ret, target.heal(game, params.amount + ("heal" in params.modifiers ? params.modifiers.heal : 0)));
-            return target.heal(game, params.amount + ("heal" in params.modifiers ? params.modifiers.heal : 0));
+            return target.heal(game, params.amount + ("heal" in self.modifiers ? self.modifiers.heal : 0));
         }
         return ret;
     },
-    "modify-effect": (game, owner, params, effectArr) => {
+    // Modifies (change/set), the property given by the path "modification"
+    // Currently does not work with arrays
+    // Objects in the path should have exactly 1 key
+    // End value cannot be object, but rather has to be number/boolean/string
+    "modify-modifier": (game, owner, params, self) => {
         const ret = emptyPArr<SocketEvent>();
-        const effect = effectArr[params.on]; // Index of the effect
-        if (effect === undefined) return ret;
-        if (params.type in effect.modifiers) {
-            // Modification is either "set" or "change"
-            //params.modification === "set" ? effect.modifiers[params.type] = params.amount : effect.modifiers[params.type] += params.amount;
-            effect.modifiers[params.type] = params.amount + (params.modification === "change" ? effect.modifiers[params.type] : 0);
-        } else {
-            effect.modifiers[params.type] = params.amount;
+        let modification = {"modifiers": deepCopy(params.modification)} as {[key: string]: any};
+        let modifier = self as {[key: string]: any};
+        let key = "modifiers";
+        // Follow the path
+        while (typeof modification[key] === "object") {
+            // Create object as necessary
+            if (!(key in modifier)) modifier[key] = {};
+            modifier = modifier[key];
+            modification = modification[key];
+            key = Object.keys(modification)[0];
+        }
+        if (params.type === "set" || !(key in modifier)) {
+            modifier[key] = modification[key];
+        } else { // params.type === "change"
+            modifier[key] += modification[key];
         }
         return ret;
     },
-    "modify-stats": (game, owner, params, card) => {
+    "modify-stats": (game, owner, params, self) => {
         const target = game.getOccupant(params.target);
         if (target) {
             return target.modifyStats(game, params.stat, params.amount, params.type);
         }
         return emptyPArr<SocketEvent>();
     },
-    "spawn": (game: GameState, owner: PlayerId, params: {[key: string]: any}, card) => {
+    "spawn": (game: GameState, owner: PlayerId, params: {[key: string]: any}, self) => {
         const type = params.type as string; // Building or Unit
         const copy = deepCopy((type === "B" ? buildings : units)[params.id]);
-        if ("modifiers" in params) {
-            if ("damage" in params.modifiers) copy.damage += params.modifiers.damage;
-            if ("health" in params.modifiers) copy.maxHealth += params.modifiers.health;
+        const modifiers = self.modifiers["spawn"];
+        if (modifiers) {
+            if ("damage" in modifiers) copy.damage += modifiers.damage;
+            if ("health" in modifiers) copy.maxHealth += modifiers.health;
         }
         return type === "B" ? game.spawnBuilding(copy as BuildingStats, params["loc"][0], params["loc"][1], owner) 
             : game.spawnUnit(copy as UnitStats, params["loc"][0], params["loc"][1], owner);

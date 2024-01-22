@@ -62,7 +62,7 @@
     },
 
     "sentry turret": {
-        "cost": 4,
+        "cost": 5,
         "cardType": "B",
         "description": "A sturdy Metropolis turret."
     },
@@ -93,8 +93,8 @@
         "cardType": "U",
         "effects": [
             {"effect": "spawn", "type": "U", "id": "prototype", "loc": "$loc"}, 
-            {"effect": "modify-effect", "modification": "change", "on": 0, "type": "attack", "amount": 1},
-            {"effect": "modify-effect", "modification": "change", "on": 0, "type": "health", "amount": 1}
+            {"effect": "modify-modifier", "type": "change", "modification": {"spawn": {"attack": 1}}},
+            {"effect": "modify-modifier", "type": "change", "modification": {"spawn": {"heatlh": 1}}}
         ],
         "description": "Starts out weak, but gets stronger every time you play it."
     },

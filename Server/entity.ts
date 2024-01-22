@@ -1,5 +1,5 @@
 import { withinRadiusInBounds } from "../Client/functions.js";
-import { Coordinate, Effect, Events, GameState, JsonEffect, PlayerId, SocketEvent, Target, checkTargets, doEffects, emptyPArr } from "./types.js";
+import { Coordinate, Effect, Events, GameState, PlayerId, SocketEvent, Target, checkTargets, doEffects, emptyPArr } from "./types.js";
 import { arrEqual, concatEvents, dist, doubleIt, isIntInRange } from "./utility.js";
 
 export { ActiveAbility, JsonActiveAbility, Entity, EntityStats, processData };
@@ -7,7 +7,7 @@ export { ActiveAbility, JsonActiveAbility, Entity, EntityStats, processData };
 interface JsonActiveAbility {
     name: string,
     targets: Target[],
-    effects: JsonEffect[],
+    effects: Effect[],
     uses?: number // Uses per turn
 }
 
@@ -35,6 +35,7 @@ class Entity {
     public health: number; // Current health
     public attacks = 0; // # of times left the unit can attack
     public activeUses: number[] = []; // # of uses left this turn for each of the actives
+    public modifiers: {[key: string]: any} = {};
     constructor(game: GameState, loc: Coordinate, stats: EntityStats, owner: PlayerId) {
         this.loc = loc;
         this.stats = stats;
@@ -114,7 +115,7 @@ class Entity {
 
         this.activeUses[index]--;
         doubleIt((i, j) => ret[i][j].push({event: "ability-use", params: [[...this.loc], index]}), 0, 0, 2, 2);
-        concatEvents(ret, doEffects(game, this.owner, ability.effects, targets));
+        concatEvents(ret, doEffects(game, this.owner, targets, this, ...ability.effects));
 
         return ret;
     }
