@@ -109,7 +109,7 @@
             "effect": "gain",
             "type": "money",
             "quantity": 3,
-            "target": "self"
+            "target": "#selfPlayer"
         }],
         "description": "A money gain operation. Probably not balanced as is, and might not make it to the final version of the game."
     }
