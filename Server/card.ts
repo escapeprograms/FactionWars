@@ -149,26 +149,25 @@ function replaceVars(game: GameState, owner: PlayerId, self: Card | Entity, obj:
     for (let key in copy) {
         const val = obj[key];
         if (typeof(val) === "string" && val[0] === "$") copy[key] = vars[val];
-        else if (typeof val === "string" && val[0] === "#") {
-            switch(val) {
-                case "#selfCard":
-                    if (self.objectType === "Card") copy[key] = self;
-                    else throw new Error("Effect parameter required a Card but effect user was not a Card");
-                    break;
-                case "#selfLoc":
-                    if (self.objectType === "Card") throw new Error("Effect parameter required a location but effect user was a Card");
-                    else copy[key] = (self as Entity).loc;
-                    break;
-                case "#selfPlayer":
-                    copy[key] = owner;
-                    break;
-                default:
-                    throw new Error("Unknown default variable name");
-            }
-        }
+        else copy[key] = replaceReferences(game, owner, self, val);
     }
-    // TODO: Add # variables (selfCard, selfEntity, selfLoc, etc.)
     return copy;
+}
+
+function replaceReferences(game: GameState, owner: PlayerId, self: Card | Entity, ref: any) {
+    if (typeof ref != "string" || ref[0] != "#") return ref;
+    switch(ref) {
+        case "#selfCard":
+            if (self.objectType === "Card") return self;
+            else throw new Error("Effect parameter required a Card but effect user was not a Card");
+        case "#selfLoc":
+            if (self.objectType === "Card") throw new Error("Effect parameter required a location but effect user was a Card");
+            else return (self as Entity).loc;
+        case "#selfPlayer":
+            return owner;
+        default:
+            throw new Error("Unknown default variable name");
+    }
 }
 
 function checkTargets(game: GameState, owner: PlayerId, reqs: Target[], targets: {[key: string]: any}): boolean {
