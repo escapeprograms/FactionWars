@@ -1,6 +1,7 @@
+import { withinRadiusInBounds } from "../Client/functions.js";
 import { BuildingStats, CardType, Coordinate, Entity, Events, Faction, GameState, PlayerArr, PlayerId, SocketEvent, UnitStats, emptyPArr, processData } from "../Server/types.js";
 import { buildings, units } from "../Server/types.js";
-import { arrEqual, concatEvents, deepCopy, doubleIt, isCoord, isIntInRange } from "../Server/utility.js";
+import { arrEqual, concatEvents, deepCopy, dist, doubleIt, isCoord, isIntInRange } from "../Server/utility.js";
 
 import c from "./../Client/cards.json" assert {type: "json"};
 
@@ -184,7 +185,7 @@ function replaceReferences(game: GameState, owner: PlayerId, self: Card | Entity
 function checkTargets(game: GameState, owner: PlayerId, self: Card | Entity, reqs: Target[], targets: {[key: string]: any}): boolean {
     targets = replaceReferences(game, owner, self, targets);
     return reqs.every(t => validateTarget[t.type](game, targets[t.name], owner) && 
-        Object.keys(t.properties).every(p => validateProperties[p](game, targets[t.name], owner, t.properties[p])))
+        Object.keys(t.properties).every(p => validateProperties[p](game, targets[t.name], owner, self, t.properties[p])))
 }
 
 const effects: {[key: string]: (game: GameState, owner: PlayerId, params: {[key: string]: any}, self: Card | Entity) => Events} = {
@@ -261,9 +262,9 @@ const validateTarget: {[key:string]: (game: GameState, target: any, owner: Playe
     //TODO: eventually implement "choice": (game: GameState, target: any) => 
 };
 
-const validateProperties: {[key:string]: (game: GameState, target: any, owner: PlayerId, value: any) => boolean} = {
+const validateProperties: {[key:string]: (game: GameState, target: any, owner: PlayerId, self: Card | Entity, value: any) => boolean} = {
     // For tiles
-    "buildable": (game, target: Coordinate, owner, size: number) => {
+    "buildable": (game, target: Coordinate, owner, self, size: number) => {
         if (typeof(size) !== "number" || !target.every((x: number)=>x+size<game.fieldSize)) return false;
         // Ensure space is vacant
         let valid = true;
@@ -278,7 +279,9 @@ const validateProperties: {[key:string]: (game: GameState, target: any, owner: P
         adj(game, target).some(c => game.getTile(c)?.occupantType === "building" && arrEqual(game.getBuilding(c)!.owner, owner)),
     // For buildings or units
     // type is either "self", "allied", or "enemy"
-    "owner": (game, target: Coordinate, owner, type: string) => type === "self" ? arrEqual(target, owner) : (type === "allied") === (target[0] === owner[0])
+    "owner": (game, target: Coordinate, owner, self, type: string) => type === "self" ? arrEqual(target, owner) : (type === "allied") === (target[0] === owner[0]),
+    // Defaults to false if it's a card which doesn't have a location
+    "withinRadius": (game, target: Coordinate, owner, self, radius: number) => "loc" in self ? dist(target, self.loc) <= radius : false
 }
 
 //const getTerms: {[key:string]: (game: GameState, target: any) => any}

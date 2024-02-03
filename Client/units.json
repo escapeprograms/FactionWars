@@ -49,7 +49,7 @@
         "speed": 4,
         "actives": [{
             "name": "Repair",
-            "targets": [{"name": "$building", "type": "building", "properties": {"owner": "self"}}],
+            "targets": [{"name": "$building", "type": "building", "properties": {"owner": "self", "withinRadius": 1}}],
             "effects": [
                 {"effect": "modify-stats", "type": "change", "amount": 1, "stat": "maxHealth", "target": "$building"},
                 {"effect": "heal", "amount": 3, "target": "$building"}
