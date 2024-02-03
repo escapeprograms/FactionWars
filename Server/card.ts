@@ -121,7 +121,7 @@ function play(game: GameState, owner: PlayerId, index: number, targets: {[key: s
     const card = player.cards[index];
     const ret = emptyPArr<SocketEvent>();
     // Validate targets && costs
-    if (card.cost <= player.money && checkTargets(game, owner, card.targets, targets)) {
+    if (card.cost <= player.money && checkTargets(game, owner, card, card.targets, targets)) {
         // Decrement money
         if (card.cost !== 0) {
             player.money -= card.cost;
@@ -154,7 +154,18 @@ function replaceVars(game: GameState, owner: PlayerId, self: Card | Entity, obj:
     return copy;
 }
 
+// Only works with json values, which is to say, doesn't work with functions
 function replaceReferences(game: GameState, owner: PlayerId, self: Card | Entity, ref: any) {
+    if (Array.isArray(ref)) {
+        ref = [...ref];
+        for (let i = 0; i < ref.length; i++) ref[i] = replaceReferences(game, owner, self, ref[i]);
+        return ref;
+    } else if (typeof ref === "object") {
+        ref = {...ref}; // This should be fine? Don't need deep copy?
+        const keys = Object.keys(ref);
+        for (let key of keys) ref[key] = replaceReferences(game, owner, self, ref[key]);
+        return ref;
+    }
     if (typeof ref != "string" || ref[0] != "#") return ref;
     switch(ref) {
         case "#selfCard":
@@ -170,7 +181,8 @@ function replaceReferences(game: GameState, owner: PlayerId, self: Card | Entity
     }
 }
 
-function checkTargets(game: GameState, owner: PlayerId, reqs: Target[], targets: {[key: string]: any}): boolean {
+function checkTargets(game: GameState, owner: PlayerId, self: Card | Entity, reqs: Target[], targets: {[key: string]: any}): boolean {
+    targets = replaceReferences(game, owner, self, targets);
     return reqs.every(t => validateTarget[t.type](game, targets[t.name], owner) && 
         Object.keys(t.properties).every(p => validateProperties[p](game, targets[t.name], owner, t.properties[p])))
 }

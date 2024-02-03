@@ -115,7 +115,7 @@ class Entity {
         if (!isIntInRange(index, 0, this.stats.actives.length - 1)) return ret; // Ability index invalid
         const ability = this.stats.actives[index];
         if (this.activeUses[index] < 1) return ret;
-        if (!checkTargets(game, this.owner, ability.targets, targets)) return ret; // Given targets invalid
+        if (!checkTargets(game, this.owner, this, ability.targets, targets)) return ret; // Given targets invalid
 
         this.activeUses[index]--;
         doubleIt((i, j) => ret[i][j].push({event: "ability-use", params: [[...this.loc], index]}), 0, 0, 2, 2);
