@@ -5,11 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Faction Wars</title>
     <script src="/socket.io/socket.io.js"></script>
+    <style>
+        #inGame {
+    display: grid;
+    grid-template: repeat(50, 20px) / repeat(50, 20px);
+}   .tile-display{
+    width: 20px;
+    height: 20px;
+}
+    </style>
 </head>
 <body>
     <div id="game">
         <canvas id="canvas" width="800" height="600"></canvas>
     </div>
+    <!-- New Code added for testing -->
+    <div id="inGame" hidden>
+        
+    </div>
+    <!-- End new code added for testing -->
     <script src="main.js" type="module"></script>
 </body>
 </html>

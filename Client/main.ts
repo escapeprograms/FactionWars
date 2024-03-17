@@ -281,6 +281,28 @@ socket.on("new-join", ({clientId, name, faction, team}: PlayerData) => {
 socket.on("game-start", (data: any) => {
     console.log("Received 'game-start'!");
     console.log(data);
+
+    // Testing code here
+    document.getElementById("game")!.hidden = true;
+    const inGame = document.getElementById("inGame")!;
+    inGame.hidden = false;
+    // Create grid
+    for (let i=0;i<50;i++) {
+        for (let j=0;j<50;j++){
+            const elem = document.createElement("div");
+            elem.id = "["+i+","+j+"]";
+            elem.className = "tile";
+            //const a = document.createElement("a");
+            //a.href = 
+            //const a = document.createTextNode("empty");
+            const a = document.createElement("img");
+            a.className = "tile-display";
+            
+            a.src = "./Assets/" + (data.field[i][j].occupant ? (data.field[i][j].occupantType == "unit" ? "unknown_unit": "unknown_building" ) : "Under_Construction") + ".png";
+            elem.appendChild(a);
+            inGame.appendChild(elem);
+        }
+    }
 });
 
 socket.on("player-left-lobby", (id: string) => {
