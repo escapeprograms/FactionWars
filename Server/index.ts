@@ -88,10 +88,11 @@ io.on("connection", (socket: Socket) => {
         } // else, should be a recovered user already in the table
     }
     // This event is for testing only
-    socket.on("test", (data)=> {
-        const mkPlayer = () => ({id: 'a', name: 'a', faction: "T" as Faction, team: 0, playerInfo: new PlayerInfo([0, 0]), status: PlayerStatus.Active});
-        const a = new GameState([mkPlayer(), mkPlayer(), mkPlayer(), mkPlayer()]);
-        console.log(a);
+    socket.on("test", (message)=> {
+        //const mkPlayer = () => ({id: 'a', name: 'a', faction: "T" as Faction, team: 0, playerInfo: new PlayerInfo([0, 0]), status: PlayerStatus.Active});
+        //const a = new GameState([mkPlayer(), mkPlayer(), mkPlayer(), mkPlayer()]);
+        //console.log(a);
+        console.log(message);
     });
     socket.on("disconnect", (reason)=> {
         console.log(socket.id + " has disconnected.");//
@@ -106,6 +107,7 @@ io.on("connection", (socket: Socket) => {
                 case SocketState.Lobby: {
                     // Remove player from lobby
                     removeFromLobby(sock);
+                    break;
                 }
                 case SocketState.Game: {
                     const {player, lobby} = sock.info;
