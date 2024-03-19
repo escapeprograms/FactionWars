@@ -23,6 +23,7 @@ const sockets = io.sockets.sockets; // Maps socketids to sockets
 function closeLobby(lobby: Lobby): void;
 function closeLobby(lobby: ActiveLobby): void;
 function closeLobby(lobby: Lobby | ActiveLobby) {
+    console.log("lobby: " + lobby.id + " was deleted.");//
     delete lobbyTable[lobby.id];
     if ("gameInfo" in lobby) clearTimeout(lobby.gameInfo.timerID);
 }
@@ -41,17 +42,20 @@ io.on("connection", (socket: Socket) => {
         // Assumes 2 teams and 2 players per team
         doubleIt((i, j) => {
             const s = sockets.get(game.players[i][j].id);
-            events[i][j].forEach(e => s?.emit(e.event, ...e.params));
-        }, 0, 2, 0, 2);
+            //events[i][j].forEach(e => s?.emit(e.event, ...e.params));
+            events[i][j].forEach(e => (console.log("Sending event", e.event, "to socket", s?.id), s?.emit(e.event, ...e.params)));//
+        }, 0, 0, 2, 2);
     }
 
     function startTurn(game: GameState) {
+        console.log("Starting turn");//
         const events = game.startTurn();
         game.timerID = setTimeout(() => endTurn(game), TURN_LENGTH);
         sendEvents(events, game);
     }
 
     function endTurn(game: GameState) {
+        console.log("Ending turn");//
         clearTimeout(game.timerID);
         const events = game.endTurn();
         sendEvents(events, game);
@@ -63,7 +67,7 @@ io.on("connection", (socket: Socket) => {
         lobby.players = lobby.players.filter(x => x.id !== socket.id);
         if (lobby.players.length === 0) {
             // Close lobby if lobby is empty
-            delete lobbyTable[lobby.id];
+            closeLobby(lobby);
         } else {
             socket.to(lobby.id).emit("player-left-lobby", sock.clientId);
         }
