@@ -277,7 +277,7 @@ io.on("connection", (socket: Socket) => {
         if (checkState(sock, SocketState.Game)) {
             const lobby = (sock as SocketInfoGame).info.lobby;
             const game = lobby.gameInfo;
-            const self = (sock as SocketInfoGame).info.player.playerInfo!.self;
+            const self = (sock as SocketInfoGame).info.player.playerInfo.self;
             if (!game.active) return;
             socket.to(lobby.id).emit("turn-status-change", self, status);
             if (game.changeEndStatus(self, status)) endTurn(game);
