@@ -65,7 +65,7 @@ class Building extends Entity {
         // Note: Manual activation needed
     }
     startTurn(game: GameState): PlayerArr<SocketEvent[]> {
-        const owner = game.getPlayer(this.owner).playerInfo!;
+        const owner = game.getPlayer(this.owner).playerInfo;
         const ret = emptyPArr<SocketEvent>();
         // Generate, if active
         if(this.active) {
@@ -130,7 +130,7 @@ class Building extends Entity {
     // Returns whether or not it is active
     // Pass in owner's PlayerInfo
     activate(game: GameState): Events {
-        const owner = game.getPlayer(this.owner).playerInfo!;
+        const owner = game.getPlayer(this.owner).playerInfo;
         const ret = emptyPArr<SocketEvent>();
         if (!this.active && this.buildLeft === 0 && this.stats.upkeep <= owner.energy) {
             owner.energy += this.stats.energyGen - this.stats.upkeep;
@@ -147,7 +147,7 @@ class Building extends Entity {
     deactivate(game: GameState): Events {
         const ret = emptyPArr<SocketEvent>();
         if (this.active) {
-            const owner = game.getPlayer(this.owner).playerInfo!;
+            const owner = game.getPlayer(this.owner).playerInfo;
             owner.energy -= this.stats.energyGen - this.stats.upkeep;
             owner.totalEnergy -= this.stats.energyGen;
             this.active = false;
@@ -171,7 +171,7 @@ class Building extends Entity {
         if (i === -1) {throw new Error("Building tried to die but was not found in game's building array");}
         game.buildings.splice(i, 1);
         // Remove from player's owned units
-        let b = owner.playerInfo!.buildings;
+        let b = owner.playerInfo.buildings;
         i = b.findIndex(c => c === this.loc);
         if (i === -1) {throw new Error("Building tried to die but was not found in player's building array");}
         b.splice(i, 1);
@@ -179,15 +179,15 @@ class Building extends Entity {
         doubleIt((i, j) => game.field[i][j].leave(), this.loc[0], this.loc[1], this.loc[0] + this.stats.size, this.loc[1] + this.stats.size);
         // Deactivate as this is no longer producing energy
         concatEvents(ret, this.deactivate(game));
-        concatEvents(ret, owner.playerInfo!.upkeep(game));
+        concatEvents(ret, owner.playerInfo.upkeep(game));
         // Return events
         concatEvents(ret, super.die(game));
         // Possible Headquarters destruction
         if (this.stats.name === "Headquarters") {
-            owner.playerInfo!.active = false;
+            owner.playerInfo.active = false;
             doubleIt((i, j) => ret[i][j].push({event: "hq-death", params: [[...this.owner]]}), 0, 0, 2, 2);
             // Possible game end
-            if (!game.getPlayer([owner.team, 1 - owner.playerInfo!.self[1]]).playerInfo!.active) {
+            if (!game.getPlayer([owner.team, 1 - owner.playerInfo.self[1]]).playerInfo.active) {
                 doubleIt((i, j) => ret[i][j].push({event: "game-end", params: [1 - owner.team]}), 0, 0, 2, 2);
                 game.active = false;
                 game.onGameEnd();

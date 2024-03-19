@@ -277,13 +277,14 @@ io.on("connection", (socket: Socket) => {
         if (checkState(sock, SocketState.Game)) {
             const lobby = (sock as SocketInfoGame).info.lobby;
             const game = lobby.gameInfo;
-            const self = (sock as SocketInfoGame).info.player.playerInfo!.self;
+            const self = (sock as SocketInfoGame).info.player.playerInfo.self;
             if (!game.active) return;
             socket.to(lobby.id).emit("turn-status-change", self, status);
             if (game.changeEndStatus(self, status)) endTurn(game);
         }
     });
     socket.on("move-unit", (unit, steps) => {
+        console.log(socket.id + " is trying to move a unit.");//
         const sock = socketTable[socket.id];
         if (checkState(sock, SocketState.Game)) {
             // Validate unit and steps types (further verification performed in game.move())
@@ -299,6 +300,7 @@ io.on("connection", (socket: Socket) => {
         }
     });
     socket.on("attack", (source, target) => {
+        console.log(socket.id + " is trying to attack.");//
         const sock = socketTable[socket.id];
         if (checkState(sock, SocketState.Game)) {
             // Validate correct input types
@@ -311,6 +313,7 @@ io.on("connection", (socket: Socket) => {
         }
     });
     socket.on("play", (cardIndex, targets) => {
+        console.log(socket.id + " is trying to play a card.");//
         const sock = socketTable[socket.id];
         if (checkState(sock, SocketState.Game)) {
             if (typeof(cardIndex) !== "number" || typeof(targets) !== "object") return;
@@ -320,6 +323,7 @@ io.on("connection", (socket: Socket) => {
         }
     });
     socket.on("useActive", (activator, abilityIndex, targets) => {
+        console.log(socket.id + " is trying to use an active ability.");//
         const sock = socketTable[socket.id];
         if (checkState(sock, SocketState.Game)) {
             if (!isCoord(activator) || typeof abilityIndex != "number" || typeof targets != "object") return;
@@ -329,6 +333,7 @@ io.on("connection", (socket: Socket) => {
         }
     });
     socket.on("goto", (state) => {
+        console.log(socket.id + " has sent event 'goto' with state: " + String(state));//
         const sock = socketTable[socket.id];
         if (checkState(sock, SocketState.GameEnd)) {
             if (state === "lobby") {

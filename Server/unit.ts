@@ -65,13 +65,13 @@ class Unit extends Entity {
                 this.steps--;
                 // TODO: Change later with invisible unit detection and other interrupts
                 // And also later implement the differences in what events are sent
-                const loc = this.loc;
-                doubleIt((i, j) => ret[i][j].push({event: "move", params: [[...loc], [...step]]}), 0, 0, 2, 2);
+                const prevloc = this.loc;
+                doubleIt((i, j) => ret[i][j].push({event: "move", params: [[...prevloc], [...step]]}), 0, 0, 2, 2);
                 this.loc = step;
                 // Add in invisible unit detection things here
                 // Adjust name in references to this unit (owner.unit, for instance)
-                const u = game.getPlayer(this.owner).playerInfo!.units
-                const i = u.findIndex(c => arrEqual(c, this.loc));
+                const u = game.getPlayer(this.owner).playerInfo.units;
+                const i = u.findIndex(c => arrEqual(c, prevloc));
                 if (i < 0) throw new Error("Unit not found in owner's unit array");
                 u[i] = [...this.loc]; // To avoid weird things happening
             } else {
@@ -87,7 +87,7 @@ class Unit extends Entity {
         if (i === -1) {throw new Error("Unit tried to die but was not found in game's unit array");}
         game.units.splice(i, 1);
         // Remove from player's owned units
-        let u = game.getPlayer(this.owner).playerInfo!.units;
+        let u = game.getPlayer(this.owner).playerInfo.units;
         i = u.findIndex(c => c === this.loc);
         if (i === -1) {throw new Error("Unit tried to die but was not found in player's unit array");}
         u.splice(i, 1);
