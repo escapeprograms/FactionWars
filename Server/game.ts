@@ -114,8 +114,8 @@ class GameState {
         doubleIt((i, j) => ret[i][j].push({event:"turn-end", params:[]}),0,0,2,2);
 
         // Activate end of turn effects, as applicable
-        this.buildings.forEach(b=>concatEvents(ret, b.endTurn(this)));
-        this.units.forEach(u=>concatEvents(ret, u.endTurn(this)));
+        this.buildings.filter(b=>b.owner[0] === this.turn).forEach(b=>concatEvents(ret, b.endTurn(this)));
+        this.units.filter(b=>b.owner[0] === this.turn).forEach(u=>concatEvents(ret, u.endTurn(this)));
         this.turn = 1 - this.turn;
 
         return ret;
@@ -127,8 +127,8 @@ class GameState {
         doubleIt((i, j) => ret[i][j].push({event:"turn-start", params:[]}),0,0,2,2);
 
         // Activate start of turn effects, as applicable
-        this.buildings.forEach(b=>concatEvents(ret, b.startTurn(this)));
-        this.units.forEach(u=>concatEvents(ret, u.startTurn(this)));
+        this.buildings.filter(b=>b.owner[0] === this.turn).forEach(b=>concatEvents(ret, b.startTurn(this)));
+        this.units.filter(b=>b.owner[0] === this.turn).forEach(u=>concatEvents(ret, u.startTurn(this)));
 
         // Players draw a card at the start of their turn
         this.players[this.turn].forEach(p => concatEvents(ret, p.playerInfo.draw()));
