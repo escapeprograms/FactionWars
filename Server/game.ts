@@ -166,13 +166,15 @@ class GameState {
         return this.units.find(u => arrEqual(u.loc, c));
     }
     // Versatile but painful to use due to typing
-    get(c: Coordinate | PlayerId, type: "unit" | "building" | "tile" | "player" | null) {
+    get(c: Coordinate | PlayerId | null, type: "unit" | "building" | "tile" | "player" | null) {
+        if (c === null) return null;
         if (type === "unit" || type === "building") return this[type + "s" as "units" | "buildings"].find(x => arrEqual(x.loc, c));
         else if (type === "tile" || type === "player") return this[type === "tile" ? "field" : "players"][c[0]][c[1]];
         else return null;
     }
     getOccupant(c: Coordinate) {
-        return this.get(c, this.getTile(c).occupantType) as Building | Unit | null | undefined;
+        const tile = this.getTile(c);
+        return this.get(tile.occupant, tile.occupantType) as Building | Unit | null | undefined;
     }
     // Returns a ClientGameState for the specified client, if any
     clientCopy(player?: PlayerId): ClientGameState {
