@@ -1,7 +1,8 @@
 import { Coordinate, Faction, PlayerId, Unit, GameState, emptyPArr, PlayerArr, SocketEvent, Events, processData, EntityStats, JsonActiveAbility, Entity } from "./types.js";
-import { arrEqual, concatEvents, dist, doubleIt } from "./utility.js";
+import { arrEqual, concatEvents, dist, doubleIt, getAdjTiles } from "./utility.js";
 import { withinRadiusInBounds } from "../Client/functions.js";
 import b from "./../Client/buildings.json" assert { type: "json" };
+import { DEFAULT_BUILD_VALUE } from "../Client/constants.js";
 
 export { Building, BuildingStats, buildings};
 
@@ -83,6 +84,12 @@ class Building extends Entity {
         // Decrement construction time
         if (this.buildLeft > 0) {
             let build = 0;
+            const adj = getAdjTiles(game, this.loc, this.stats.size);
+            adj.forEach(c => {
+                const u = game.getUnit(c);
+                if (u && arrEqual(u.owner, this.owner)) build += u.stats.attributes["build"] !== undefined ? u.stats.attributes["build"] : DEFAULT_BUILD_VALUE;
+            })
+            /*
             // There's a lot of code duplication here... potentially revise?
             // Iterate above and below
             let x, y;
@@ -110,7 +117,7 @@ class Building extends Entity {
                     let unit = game.getUnit([x, y]);
                     if (unit && arrEqual(unit.owner, this.owner)) build += 2; // Refine later when we have special keywords/abilities for building
                 }
-            }
+            }*/
             
             if (build > this.buildLeft) build = this.buildLeft;
             // There might be a way to simplify this? Since I'm using ceil I don't want to accidentally end up with extra health
