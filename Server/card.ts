@@ -1,7 +1,7 @@
 import { withinRadiusInBounds } from "../Client/functions.js";
 import { BuildingStats, CardType, Coordinate, Entity, Events, Faction, GameState, PlayerArr, PlayerId, SocketEvent, UnitStats, emptyPArr, processData } from "../Server/types.js";
 import { buildings, units } from "../Server/types.js";
-import { arrEqual, concatEvents, deepCopy, dist, doubleIt, isCoord, isIntInRange } from "../Server/utility.js";
+import { arrEqual, concatEvents, deepCopy, dist, doubleIt, getAdjTiles, isCoord, isIntInRange } from "../Server/utility.js";
 
 import c from "./../Client/cards.json" assert {type: "json"};
 
@@ -271,12 +271,12 @@ const validateProperties: {[key:string]: (game: GameState, target: any, owner: P
         doubleIt((i, j)=> {if(game.field[i][j].occupant) valid = false;}, target[0], target[1], target[0]+size, target[1]+size);
         if (!valid) return false;
         // Ensure building is next to a unit belonging to the player
-        adj(game, target, size).some(c => game.getTile(c)?.occupantType === "unit" && arrEqual(game.getUnit(c)!.owner, owner));
+        getAdjTiles(game, target, size).some(c => game.getTile(c)?.occupantType === "unit" && arrEqual(game.getUnit(c)!.owner, owner));
         return valid;
     },
     "empty": (game, target: Coordinate) => game.getTile(target).occupant === null,
     "spawnable": (game, target: Coordinate, owner) => !game.getTile(target).occupant && 
-        adj(game, target).some(c => game.getTile(c)?.occupantType === "building" && arrEqual(game.getBuilding(c)!.owner, owner)),
+        getAdjTiles(game, target).some(c => game.getTile(c)?.occupantType === "building" && arrEqual(game.getBuilding(c)!.owner, owner)),
     // For buildings or units
     // type is either "self", "allied", or "enemy"
     "owner": (game, target: Coordinate, owner, self, type: string) => type === "self" ? arrEqual(target, owner) : (type === "allied") === (target[0] === owner[0]),
@@ -285,16 +285,3 @@ const validateProperties: {[key:string]: (game: GameState, target: any, owner: P
 }
 
 //const getTerms: {[key:string]: (game: GameState, target: any) => any}
-// target should be a valid Coordinate, length should be size of object in tiles-lengths
-function adj(game: GameState, target: Coordinate, length=1) {
-    const borders: Coordinate[] = [];
-    function getBorder(side: 0 | 1) {
-        for (let x = target[side]; x < target[side]+length; x++) {
-            if (target[1 - side] - 1 >= 0) borders.push([x, target[1 - side]-1]);
-            if (target[1 - side] + length < game.fieldSize) borders.push([x, target[1 - side] + length]);
-        }
-    }
-    getBorder(0);
-    getBorder(1);
-    return borders;
-}

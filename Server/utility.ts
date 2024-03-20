@@ -1,5 +1,20 @@
 // Merge functions.js once it becomes functions.ts
-import { Coordinate, Events } from "./types.js";
+import { Coordinate, Events, GameState } from "./types.js";
+
+// Returns array of coordinates of all bordering tiles
+// target should be a valid Coordinate, length should be size of entity in tile-lengths
+export function getAdjTiles(game: GameState, target: Coordinate, length=1): Coordinate[] {
+    const borders: Coordinate[] = [];
+    function getBorder(side: 0 | 1) {
+        for (let x = target[side]; x < target[side]+length; x++) {
+            if (target[1 - side] - 1 >= 0) borders.push([x, target[1 - side]-1]);
+            if (target[1 - side] + length < game.fieldSize) borders.push([x, target[1 - side] + length]);
+        }
+    }
+    getBorder(0);
+    getBorder(1);
+    return borders;
+}
 
 export function arrEqual<T>(c1: T[], c2: T[]) {
     return c1.length === c2.length && c1.every((e, i)=>e === c2[i]);
