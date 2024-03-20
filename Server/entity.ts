@@ -12,7 +12,7 @@ interface JsonActiveAbility {
 }
 
 interface ActiveAbility extends JsonActiveAbility {
-    effects: Effect[];
+    effects: Effect[]; // This line isn't necessary?
     uses: number;
 } 
 
@@ -24,7 +24,7 @@ interface EntityStats {
     range: number; // 1 = melee
     actives: ActiveAbility[];
     passives: string[];
-    attributes: string[]; // Could potentially make a new type or enum for this
+    attributes: {[key: string]: any}; // Could potentially make a new type or enum for this
 }
 
 class Entity {

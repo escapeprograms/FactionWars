@@ -20,7 +20,7 @@ const defaults: {[key: string]: any} = {
         }]
     }],
     passives: [],
-    attributes: [],
+    attributes: {},
 }
 
 // TODO: Do HQ's Industrial Might
@@ -41,7 +41,7 @@ type JsonBuilding = {
     size: number; // Buildings are assumed to be square
     actives?: JsonActiveAbility[];
     passives?: string[];
-    attributes?: string[]; // Could potentially make a new type or enum for this
+    attributes?: {[key: string]: any}; // Could potentially make a new type or enum for this
 }
 
 interface BuildingStats extends EntityStats {

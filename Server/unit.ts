@@ -14,7 +14,7 @@ const defaults = {
         }]
     }],
     "passives": [],
-    "attributes": [],
+    "attributes": {},
 }
 processData(u, defaults);
 const units = (u as {[key: string]: JsonUnit}) as {[key: string]: UnitStats & {faction: Faction}};
@@ -29,7 +29,7 @@ type JsonUnit = {
     splash?: number; // Splash radius in tiles, 0 for melee
     actives?: JsonActiveAbility[];
     passives?: string[];
-    attributes?: string[]; // Could potentially make a new type or enum for this
+    attributes?: {[key: string]: any}; // Could potentially make a new type or enum for this
 }
 
 interface UnitStats extends EntityStats {
