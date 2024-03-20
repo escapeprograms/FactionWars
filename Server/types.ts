@@ -107,7 +107,7 @@ export type Coordinate = [number, number];
 
 export type PlayerId = [Team, number];
 
-export type SocketEvent = {event: string, params: any}
+export type SocketEvent = {event: string, params: any[]}
 
 export type PlayerArr<T> = [T[], T[]];
 export const emptyPArr = <T>() => [[[], []], [[], []]] as PlayerArr<T[]>;
