@@ -88,6 +88,11 @@
         "description": "A basic unit."
     },
 
+    "engineer": {
+        "cost": 4,
+        "cardType": "U"
+    },
+
     "prototype": {
         "cost": 3,
         "cardType": "U",
