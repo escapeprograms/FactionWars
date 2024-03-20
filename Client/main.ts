@@ -4,7 +4,7 @@ import { isValidName } from "./functions.js";
 declare const io: any;
 const socket = io();
 //
-export {socket, players, redList, blueList};
+export {socket, players, redList, blueList, gameState};
 
 let myId: string;
 socket.on("id", (id: string) => myId = id);
@@ -282,10 +282,20 @@ socket.on("new-join", ({clientId, name, faction, team}: PlayerData) => {
     updateUI();
 });
 
+let gameState: any;
+function updateTile(x: number, y: number) {
+    const tile = document.getElementById("["+x+","+y+"]");
+    if (!tile) {
+        console.log("Tile not found");
+        return;
+    }
+    (tile.firstChild as HTMLImageElement).src = "./Assets/" + (gameState.field[x][y].occupant ? (gameState.field[x][y].occupantType == "unit" ? "unknown_unit": "unknown_building" ) : "temp-grass") + ".png";
+}
+
 socket.on("game-start", (data: any) => {
     console.log("Received 'game-start'!");
     console.log(data);
-
+    gameState = data;
     // Testing code here
 
     data.getPlayer = (c: any) => data.players[c[0]][c[1]];
@@ -386,6 +396,17 @@ socket.on("change-money", (playerId: any, amount: number)=>{
     const temp = getStatNode(playerId, "money")!;
     temp.textContent = (amount + Number(temp.textContent!)) as any as string;
 });
+socket.on("move", (prevloc: any, newloc: any)=> {
+    console.log("Recieved 'move' from", prevloc, "to", newloc); 
+    const newTile = gameState.field[newloc[0]][newloc[1]];
+    const oldTile = gameState.field[prevloc[0]][prevloc[1]];
+    newTile.occupant = oldTile.occupant;
+    newTile.occupantType = oldTile.occupantType;
+    oldTile.occupant = null;
+    oldTile.occupantType = null;
+    updateTile(prevloc[0], prevloc[1]);
+    updateTile(newloc[0], newloc[1]);
+})
 // End new test code
 
 socket.on("player-left-lobby", (id: string) => {
