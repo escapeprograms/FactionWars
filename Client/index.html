@@ -6,12 +6,13 @@
     <title>Faction Wars</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        #inGame {
+        #game-grid {
     display: grid;
-    grid-template: repeat(50, 20px) / repeat(50, 20px);
+    grid-template: repeat(50, 19px) / repeat(50, 19px);
+    background-color: lightgreen;
 }   .tile-display{
-    width: 20px;
-    height: 20px;
+    width: 19px;
+    height: 19px;
 }
     </style>
 </head>
@@ -20,10 +21,18 @@
         <canvas id="canvas" width="800" height="600"></canvas>
     </div>
     <!-- New Code added for testing -->
-    <div id="inGame" hidden>
-        
+    <div id="inGame" > <!--hidden="true"-->
+        <div id="game-grid"></div>
+        <div id="stats">
+            <div>Turn #: <span id="turn#">-1</span></div>
+            <div class="player-stats" id="0-0"></div>
+            <div class="player-stats" id="0-1"></div>
+            <div class="player-stats" id="1-0"></div>
+            <div class="player-stats" id="1-1"></div>
+        </div>
     </div>
     <!-- End new code added for testing -->
-    <script src="main.js" type="module"></script>
+    <script src="main.js" type="module">import {socket} from "main.js"; window.test = socket;</script>
+    <!--In console, type: const m = await import('./main.js'); const socket = m.socket; -->
 </body>
 </html>

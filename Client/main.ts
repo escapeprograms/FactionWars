@@ -1,7 +1,10 @@
+import { TURN_LENGTH } from "./constants.js";
 import { isValidName } from "./functions.js";
 
 declare const io: any;
 const socket = io();
+//
+export {socket, players, redList, blueList};
 
 let myId: string;
 socket.on("id", (id: string) => myId = id);
@@ -274,6 +277,7 @@ interface PlayerData {
 }
 
 socket.on("new-join", ({clientId, name, faction, team}: PlayerData) => {
+    console.log("Recieved new join with name: " + name);
     players.push(new Player(clientId, name, faction, team));
     updateUI();
 });
@@ -283,9 +287,34 @@ socket.on("game-start", (data: any) => {
     console.log(data);
 
     // Testing code here
+
+    data.getPlayer = (c: any) => data.players[c[0]][c[1]];
+    // Oh no, code duplication!?!
+    data.getTile = (c: any) => {
+        return data.field[c[0]][c[1]];
+    }
+    data.getBuilding = (c: any) => {
+        return data.buildings.find((b: any) => b.loc[0] === c[0] && b.loc[1] === c[1]);
+    }
+    data.getUnit = (c: any) => {
+        return data.units.find((b: any) => b.loc[0] === c[0] && b.loc[1] === c[1]);
+    }
+    // Versatile but painful to use due to typing
+    data.get = (c: any, type: "unit" | "building" | "tile" | "player" | null) => {
+        if (c === null) return null;
+        if (type === "unit" || type === "building") return data[type + "s" as "units" | "buildings"].find((x: any) => x.loc[0] === c[0] && x.loc[1] === c[1]);
+        else if (type === "tile" || type === "player") return data[type === "tile" ? "field" : "players"][c[0]][c[1]];
+        else return null;
+    }
+    data.getOccupant = (c: any) => {
+        const tile = data.getTile(c);
+        return data.get(tile.occupant, tile.occupantType);
+    }
+
     document.getElementById("game")!.hidden = true;
-    const inGame = document.getElementById("inGame")!;
-    inGame.hidden = false;
+    document.getElementById("inGame")!.hidden = false;
+    const gameGrid = document.getElementById("game-grid")!;
+    gameGrid.hidden = false;
     // Create grid
     for (let i=0;i<50;i++) {
         for (let j=0;j<50;j++){
@@ -298,14 +327,69 @@ socket.on("game-start", (data: any) => {
             const a = document.createElement("img");
             a.className = "tile-display";
             
-            a.src = "./Assets/" + (data.field[i][j].occupant ? (data.field[i][j].occupantType == "unit" ? "unknown_unit": "unknown_building" ) : "Under_Construction") + ".png";
+            a.src = "./Assets/" + (data.field[i][j].occupant ? (data.field[i][j].occupantType == "unit" ? "unknown_unit": "unknown_building" ) : "temp-grass") + ".png";
+            a.addEventListener("click", ()=>console.log(data.getOccupant([i, j])));//
             elem.appendChild(a);
-            inGame.appendChild(elem);
+            gameGrid.appendChild(elem);
         }
     }
+    // Create stats
+    let stats = ["money", "energy", "cards"];
+    for (let i = 0; i < 2; i++) {
+        for (let j = 0; j < 2; j++) {
+            const div = document.getElementById("" + i + "-" + j)!;
+            let text=  document.createTextNode("Player"+"["+i+","+j+"]");
+            div.appendChild(text);
+            stats.forEach(s => {
+                const elem = document.createElement("div");
+                elem.id = "" + i + "-" + j + "-" + s;
+                let text = document.createTextNode(s + ": ");
+                elem.appendChild(text);
+                text = document.createTextNode(data.players[i][j].playerInfo[s]);
+                elem.appendChild(text);
+                div.appendChild(elem);
+            });
+        }
+    }
+    // Create global stats
+    let elem = document.getElementById("turn#")!;
+    elem.textContent = data.turn;
 });
 
+// New test code here too
+let timer: NodeJS.Timeout;
+socket.on("turn-start", ()=>{
+    console.log("Received 'turn-start'");
+    console.log("Setting timer for " + (TURN_LENGTH - 500) + " milliseconds");
+    timer = setTimeout(()=>console.log("Time's up!"), TURN_LENGTH - 500); // A bit of leeway just in case
+});
+socket.on("turn-end", ()=>{
+    console.log("Received 'turn-end', changing turn #");
+    document.getElementById("turn#")!.textContent = (1 - (document.getElementById("turn#")!.textContent! as any as number)) as any as string;
+    clearTimeout(timer);
+});
+function getStatNode(playerId: any, statName: string) {
+    const temp = document.getElementById(""+playerId[0]+"-"+playerId[1]+"-"+statName);
+    return temp?.lastChild;
+}
+const format = (playerId: [number, number]) => "["+playerId[0]+","+playerId[1]+"]";
+socket.on("card-drawn", (playerId: any, card?: any)=> {
+    console.log(format(playerId) + " has drawn a card."); 
+    if (card) console.log(card);// To be implemented
+    else {
+        const temp = getStatNode(playerId, "cards")!;
+        temp.textContent = (1 + Number(temp.textContent!)) as any as string;
+    }
+});
+socket.on("change-money", (playerId: any, amount: number)=>{
+    console.log(format(playerId) + "'s money has changed by " + amount);
+    const temp = getStatNode(playerId, "money")!;
+    temp.textContent = (amount + Number(temp.textContent!)) as any as string;
+});
+// End new test code
+
 socket.on("player-left-lobby", (id: string) => {
+    console.log("Recieved 'player-left-lobby' with id="+id);
     const index = players.findIndex(player => player.id === id);
     // Just in case
     if (index < 0) {
