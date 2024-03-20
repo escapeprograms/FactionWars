@@ -367,16 +367,26 @@ socket.on("game-start", (data: any) => {
 });
 
 // New test code here too
-let timer: NodeJS.Timeout;
+let fullTimer: NodeJS.Timeout;
+let smallTimer: NodeJS.Timeout;
 socket.on("turn-start", ()=>{
     console.log("Received 'turn-start'");
-    console.log("Setting timer for " + (TURN_LENGTH - 500) + " milliseconds");
-    timer = setTimeout(()=>console.log("Time's up!"), TURN_LENGTH - 500); // A bit of leeway just in case
+    const timer_length = TURN_LENGTH - 500;
+    const currTime = new Date();
+    const endTime = currTime.setMilliseconds(currTime.getMilliseconds() + timer_length);
+    console.log("Setting timer for " + timer_length + " milliseconds");
+    fullTimer = setTimeout(()=>console.log("Time's up!"), timer_length); // A bit of leeway just in case
+    smallTimer = setInterval(()=>{
+        const timeLeft = (endTime - (new Date() as any as number))/1000;
+        document.getElementById("timer")!.textContent = (timeLeft > 0 ? timeLeft : 0) as any as string;
+        if (timeLeft <= 0) clearInterval(smallTimer);
+    },100); // For now, precision is ~0.1sec
 });
 socket.on("turn-end", ()=>{
     console.log("Received 'turn-end', changing turn #");
     document.getElementById("turn#")!.textContent = (1 - (document.getElementById("turn#")!.textContent! as any as number)) as any as string;
-    clearTimeout(timer);
+    clearTimeout(fullTimer);
+    clearInterval(smallTimer);
 });
 function getStatNode(playerId: any, statName: string) {
     const temp = document.getElementById(""+playerId[0]+"-"+playerId[1]+"-"+statName);
