@@ -115,7 +115,7 @@ class GameState {
 
         const ret = new Events();
         //doubleIt((i, j) => ret[i][j].push({event:"turn-end", params:[]}),0,0,2,2);
-        ret.addEvent("end-turn");
+        ret.addEvent("turn-end");
 
         // Activate end of turn effects, as applicable
         this.buildings.filter(b=>b.owner[0] === this.turn).forEach(b=>ret.concat(b.endTurn(this)));
