@@ -1,5 +1,5 @@
 import { Coordinate, Faction, PlayerId, PlayerArr, emptyPArr, SocketEvent, Events, Building, GameState, JsonActiveAbility, ActiveAbility, processData, EntityStats, Entity } from "./types.js";
-import { arrEqual, concatEvents, dist, doubleIt } from "./utility.js";
+import { arrEqual, dist, doubleIt } from "./utility.js";
 import { withinRadiusInBounds } from "../Client/functions.js";
 import u from "./../Client/units.json" assert {type: "json"};
 
@@ -14,7 +14,7 @@ const defaults = {
         }]
     }],
     "passives": [],
-    "attributes": [],
+    "attributes": {},
 }
 processData(u, defaults);
 const units = (u as {[key: string]: JsonUnit}) as {[key: string]: UnitStats & {faction: Faction}};
@@ -29,7 +29,7 @@ type JsonUnit = {
     splash?: number; // Splash radius in tiles, 0 for melee
     actives?: JsonActiveAbility[];
     passives?: string[];
-    attributes?: string[]; // Could potentially make a new type or enum for this
+    attributes?: {[key: string]: any}; // Could potentially make a new type or enum for this
 }
 
 interface UnitStats extends EntityStats {
@@ -46,15 +46,15 @@ class Unit extends Entity {
         this.stats = stats; // Is there an easier way where this line isn't needed?
         for (let i = 0; i < stats.actives.length; i++) this.activeUses.push(0);
     }
-    startTurn(game: GameState): PlayerArr<SocketEvent[]> {
+    startTurn(game: GameState): Events {
         // Do start turn stuff here, if any
         this.steps = this.stats.speed;
         this.moves = 1;
         return super.startTurn(game);
     }
     //endTurn() // Does nothing, inherited from Entity
-    move(game: GameState, steps: Coordinate[]): PlayerArr<SocketEvent[]> {
-        const ret: PlayerArr<SocketEvent[]> = emptyPArr();
+    move(game: GameState, steps: Coordinate[]): Events {
+        const ret = new Events();
         if (this.moves < 1) return ret;
         this.moves--; // Possibly modify this later?
         steps = [...steps]; // Avoid modifying parameters
@@ -66,7 +66,8 @@ class Unit extends Entity {
                 // TODO: Change later with invisible unit detection and other interrupts
                 // And also later implement the differences in what events are sent
                 const prevloc = this.loc;
-                doubleIt((i, j) => ret[i][j].push({event: "move", params: [[...prevloc], [...step]]}), 0, 0, 2, 2);
+                //doubleIt((i, j) => ret[i][j].push({event: "move", params: [[...prevloc], [...step]]}), 0, 0, 2, 2);
+                ret.addEvent("move", [[...prevloc], [...step]]);
                 this.loc = step;
                 // Add in invisible unit detection things here
                 // Adjust name in references to this unit (owner.unit, for instance)

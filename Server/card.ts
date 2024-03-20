@@ -1,7 +1,7 @@
 import { withinRadiusInBounds } from "../Client/functions.js";
 import { BuildingStats, CardType, Coordinate, Entity, Events, Faction, GameState, PlayerArr, PlayerId, SocketEvent, UnitStats, emptyPArr, processData } from "../Server/types.js";
 import { buildings, units } from "../Server/types.js";
-import { arrEqual, concatEvents, deepCopy, dist, doubleIt, isCoord, isIntInRange } from "../Server/utility.js";
+import { arrEqual, deepCopy, dist, doubleIt, getAdjTiles, isCoord, isIntInRange } from "../Server/utility.js";
 
 import c from "./../Client/cards.json" assert {type: "json"};
 
@@ -120,26 +120,27 @@ interface Card {
 function play(game: GameState, owner: PlayerId, index: number, targets: {[key: string]: any}): Events {
     const player = game.getPlayer(owner).playerInfo;
     const card = player.cards[index];
-    const ret = emptyPArr<SocketEvent>();
+    const ret = new Events();
     // Validate targets && costs
     if (card.cost <= player.money && checkTargets(game, owner, card, card.targets, targets)) {
         // Decrement money
         if (card.cost !== 0) {
             player.money -= card.cost;
-            doubleIt((i, j)=>ret[i][j].push({event: "change-money", params: [[...owner], -card.cost]}), 0, 0, 2, 2);
+            //doubleIt((i, j)=>ret[i][j].push({event: "change-money", params: [[...owner], -card.cost]}), 0, 0, 2, 2);
+            ret.addEvent("change-money", [[...owner], -card.cost]);
         }
         // Play effects
-        concatEvents(ret, doEffects(game, owner, targets, card, ...card.effects));
+        ret.concat(doEffects(game, owner, targets, card, ...card.effects));
         // Discard card
-        concatEvents(ret, player.discard(index)); // May need to modify later if we have onDiscard effects
+        ret.concat(player.discard(index)); // May need to modify later if we have onDiscard effects
     }
     return ret;
 }
 
 // Does not validate targets
 function doEffects(game: GameState, owner: PlayerId, targets: {[key: string]: any}, self: Card | Entity, ...effectArr: Effect[]): Events {
-    const ret = emptyPArr<SocketEvent>();
-    effectArr.forEach(e => concatEvents(ret, effects[e.effect](game, owner, replaceVars(game, owner, self, e, targets), self)));
+    const ret = new Events();
+    effectArr.forEach(e => ret.concat(effects[e.effect](game, owner, replaceVars(game, owner, self, e, targets), self)));
     return ret;
 }
 
@@ -191,13 +192,14 @@ function checkTargets(game: GameState, owner: PlayerId, self: Card | Entity, req
 const effects: {[key: string]: (game: GameState, owner: PlayerId, params: {[key: string]: any}, self: Card | Entity) => Events} = {
     "gain": (game, owner, params, self) => {
         // Assume gain is money for now
-        const ret = emptyPArr<SocketEvent>();
+        const ret = new Events();
         game.getPlayer(params.target).playerInfo.money += params.quantity
-        doubleIt((i, j)=>ret[i][j].push({event: "change-money", params: [[...params.target], params.quantity]}), 0, 0, 2, 2);
+        //doubleIt((i, j)=>ret[i][j].push({event: "change-money", params: [[...params.target], params.quantity]}), 0, 0, 2, 2);
+        ret.addEvent("change-money", [[...params.target], params.quantity]);
         return ret; 
     },
     "heal": (game, owner, params, self) => {
-        const ret = emptyPArr<SocketEvent>();
+        const ret = new Events();
         const target = game.getOccupant(params.target);
         if (target) {
             //concatEvents(ret, target.heal(game, params.amount + ("heal" in params.modifiers ? params.modifiers.heal : 0)));
@@ -210,7 +212,7 @@ const effects: {[key: string]: (game: GameState, owner: PlayerId, params: {[key:
     // Objects in the path should have exactly 1 key
     // End value cannot be object, but rather has to be number/boolean/string
     "modify-modifier": (game, owner, params, self) => {
-        const ret = emptyPArr<SocketEvent>();
+        const ret = new Events();
         let modification = {"modifiers": deepCopy(params.modification)} as {[key: string]: any};
         let modifier = self as {[key: string]: any};
         let key = "modifiers";
@@ -234,7 +236,7 @@ const effects: {[key: string]: (game: GameState, owner: PlayerId, params: {[key:
         if (target) {
             return target.modifyStats(game, params.stat, params.amount, params.type);
         }
-        return emptyPArr<SocketEvent>();
+        return new Events();
     },
     "spawn": (game: GameState, owner: PlayerId, params: {[key: string]: any}, self) => {
         const type = params.type as string; // Building or Unit
@@ -271,12 +273,12 @@ const validateProperties: {[key:string]: (game: GameState, target: any, owner: P
         doubleIt((i, j)=> {if(game.field[i][j].occupant) valid = false;}, target[0], target[1], target[0]+size, target[1]+size);
         if (!valid) return false;
         // Ensure building is next to a unit belonging to the player
-        adj(game, target, size).some(c => game.getTile(c)?.occupantType === "unit" && arrEqual(game.getUnit(c)!.owner, owner));
+        getAdjTiles(game, target, size).some(c => game.getTile(c)?.occupantType === "unit" && arrEqual(game.getUnit(c)!.owner, owner));
         return valid;
     },
     "empty": (game, target: Coordinate) => game.getTile(target).occupant === null,
     "spawnable": (game, target: Coordinate, owner) => !game.getTile(target).occupant && 
-        adj(game, target).some(c => game.getTile(c)?.occupantType === "building" && arrEqual(game.getBuilding(c)!.owner, owner)),
+        getAdjTiles(game, target).some(c => game.getTile(c)?.occupantType === "building" && arrEqual(game.getBuilding(c)!.owner, owner)),
     // For buildings or units
     // type is either "self", "allied", or "enemy"
     "owner": (game, target: Coordinate, owner, self, type: string) => type === "self" ? arrEqual(target, owner) : (type === "allied") === (target[0] === owner[0]),
@@ -285,16 +287,3 @@ const validateProperties: {[key:string]: (game: GameState, target: any, owner: P
 }
 
 //const getTerms: {[key:string]: (game: GameState, target: any) => any}
-// target should be a valid Coordinate, length should be size of object in tiles-lengths
-function adj(game: GameState, target: Coordinate, length=1) {
-    const borders: Coordinate[] = [];
-    function getBorder(side: 0 | 1) {
-        for (let x = target[side]; x < target[side]+length; x++) {
-            if (target[1 - side] - 1 >= 0) borders.push([x, target[1 - side]-1]);
-            if (target[1 - side] + length < game.fieldSize) borders.push([x, target[1 - side] + length]);
-        }
-    }
-    getBorder(0);
-    getBorder(1);
-    return borders;
-}

@@ -10,6 +10,7 @@ export * from "./unit.js";
 export * from "./card.js";
 export * from "./game.js";
 export * from "./player.js";
+export * from "./events.js";
 
 export type Faction = "T" | "M" | "S" | "A";
 
@@ -107,12 +108,12 @@ export type Coordinate = [number, number];
 
 export type PlayerId = [Team, number];
 
-export type SocketEvent = {event: string, params: any}
+export type SocketEvent = {event: string, params: any[]}
 
 export type PlayerArr<T> = [T[], T[]];
 export const emptyPArr = <T>() => [[[], []], [[], []]] as PlayerArr<T[]>;
 
-export type Events = PlayerArr<SocketEvent[]>;
+//export type Events = PlayerArr<SocketEvent[]>;
 
 export type ClientGameState = {
     turn: number,

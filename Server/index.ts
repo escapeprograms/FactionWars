@@ -37,7 +37,7 @@ io.on("connection", (socket: Socket) => {
         }
         return true;
     }
-
+    /*
     function sendEvents(events: PlayerArr<SocketEvent[]>, game: GameState) {
         // Assumes 2 teams and 2 players per team
         doubleIt((i, j) => {
@@ -45,20 +45,21 @@ io.on("connection", (socket: Socket) => {
             //events[i][j].forEach(e => s?.emit(e.event, ...e.params));
             events[i][j].forEach(e => (console.log("Sending event", e.event, "to socket", s?.id), s?.emit(e.event, ...e.params)));//
         }, 0, 0, 2, 2);
-    }
+    }*/
 
     function startTurn(game: GameState) {
         console.log("Starting turn");//
         const events = game.startTurn();
         game.timerID = setTimeout(() => endTurn(game), TURN_LENGTH);
-        sendEvents(events, game);
+        events.send(game, sockets);
     }
 
     function endTurn(game: GameState) {
         console.log("Ending turn");//
         clearTimeout(game.timerID);
-        const events = game.endTurn();
-        sendEvents(events, game);
+        game.endTurn().send(game, sockets);
+        //const events = game.endTurn();
+        //sendEvents(events, game);
         startTurn(game);
     }
 
@@ -296,7 +297,7 @@ io.on("connection", (socket: Socket) => {
             const events = game.move(info.player.playerInfo.self, unit, steps);
             
             // Broadcast events
-            sendEvents(events, game);
+            events.send(game, sockets);
         }
     });
     socket.on("attack", (source, target) => {
@@ -309,7 +310,8 @@ io.on("connection", (socket: Socket) => {
             if (!game.active) return;
             const events = game.attack((sock as SocketInfoGame).info.player.playerInfo.self, source, target);
 
-            sendEvents(events, game);
+            // Broadcast events
+            events.send(game, sockets);
         }
     });
     socket.on("play", (cardIndex, targets) => {
@@ -319,7 +321,7 @@ io.on("connection", (socket: Socket) => {
             if (typeof(cardIndex) !== "number" || typeof(targets) !== "object") return;
             const game = (sock as SocketInfoGame).info.lobby.gameInfo;
             if (!game.active) return;
-            sendEvents(game.play((sock as SocketInfoGame).info.player.playerInfo.self, cardIndex, targets), game);
+            game.play((sock as SocketInfoGame).info.player.playerInfo.self, cardIndex, targets).send(game, sockets);
         }
     });
     socket.on("useActive", (activator, abilityIndex, targets) => {
@@ -329,7 +331,7 @@ io.on("connection", (socket: Socket) => {
             if (!isCoord(activator) || typeof abilityIndex != "number" || typeof targets != "object") return;
             const game = (sock as SocketInfoGame).info.lobby.gameInfo;
             if (!game.active) return;
-            sendEvents(game.useActive((sock as SocketInfoGame).info.player.playerInfo.self, activator, abilityIndex, targets), game);
+            game.useActive((sock as SocketInfoGame).info.player.playerInfo.self, activator, abilityIndex, targets).send(game, sockets);
         }
     });
     socket.on("goto", (state) => {

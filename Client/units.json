@@ -55,6 +55,7 @@
                 {"effect": "heal", "amount": 3, "target": "$building"}
             ]
         }],
-        "description": "Can repair & buff buildings, and also builds twice as fast as typical units."
+        "description": "Can repair & buff buildings, and also builds twice as fast as typical units.",
+        "attributes": {"build": 4}
     } 
 }

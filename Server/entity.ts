@@ -1,6 +1,6 @@
 import { withinRadiusInBounds } from "../Client/functions.js";
 import { Building, Coordinate, Effect, Events, GameState, PlayerId, SocketEvent, Target, Unit, checkTargets, doEffects, emptyPArr } from "./types.js";
-import { arrEqual, concatEvents, dist, doubleIt, isIntInRange } from "./utility.js";
+import { arrEqual, dist, doubleIt, isIntInRange } from "./utility.js";
 
 export { ActiveAbility, JsonActiveAbility, Entity, EntityStats, processData };
 
@@ -12,7 +12,7 @@ interface JsonActiveAbility {
 }
 
 interface ActiveAbility extends JsonActiveAbility {
-    effects: Effect[];
+    effects: Effect[]; // This line isn't necessary?
     uses: number;
 } 
 
@@ -24,7 +24,7 @@ interface EntityStats {
     range: number; // 1 = melee
     actives: ActiveAbility[];
     passives: string[];
-    attributes: string[]; // Could potentially make a new type or enum for this
+    attributes: {[key: string]: any}; // Could potentially make a new type or enum for this
 }
 
 class Entity {
@@ -48,19 +48,20 @@ class Entity {
         // No client event is sent for this
         this.attacks = this.stats.damage > 0 ? 1 : 0;
         this.activeUses = this.activeUses.map(_ => 1);
-        return emptyPArr();
+        return new Events();
     }
     endTurn(game: GameState): Events {
-        return emptyPArr();
+        return new Events();
     }
     attack(game: GameState, target: Coordinate): Events {
-        const ret = emptyPArr<SocketEvent>();
+        const ret = new Events();
         // Assumes that entites that don't do damage cannot attack
         if (this.attacks < 1 || this.stats.damage === 0) return ret; // Out of attacks / Cannot attack
         if (dist(this.loc, target) > this.stats.range || arrEqual(this.loc, target)) return ret; // Out of range / Cannot attack self
         if (!game.sight(this.loc, target)) return ret; // Cannot see target
         if (this.stats.splash <= 0 && !game.getTile(target).occupant) return ret; // Non-splashers cannot attack empty tile
-        doubleIt((i, j) => ret[i][j].push({event: "attack", params: [[...this.loc], [...target]]}), 0, 0, 2, 2);
+        //doubleIt((i, j) => ret[i][j].push({event: "attack", params: [[...this.loc], [...target]]}), 0, 0, 2, 2);
+        ret.addEvent("attack", [[...this.loc], [...target]]);
         // Eventually special effects as needed
         // NOTE: The code does not check for friendly fire!
         // Will have to adjust victim finding if field ever becomes non-square
@@ -69,7 +70,7 @@ class Entity {
         (withinRadiusInBounds(target, this.stats.splash, 0, 0, game.fieldSize-1, game.fieldSize-1) as Coordinate[]).forEach(v => {
             if ((victim = game.getOccupant(v)) && !targeted[victim.loc.toString()]) {
                 targeted[victim.toString()] = true;
-                concatEvents(ret, victim.takeDamage(game, this.stats.damage));
+                ret.concat(victim.takeDamage(game, this.stats.damage));
             }
         });
         
@@ -78,48 +79,55 @@ class Entity {
     }
     takeDamage(game: GameState, damage: number): Events {
         // Eventually implement special abilities as necessary
-        const ret = emptyPArr<SocketEvent>();
+        const ret = new Events();
         this.health -= damage;
-        doubleIt((i, j) => ret[i][j].push({event: "took-damage", params: [[...this.loc], damage]}), 0, 0, 2, 2);
-        if (this.health <= 0) concatEvents(ret, this.die(game));
+        //doubleIt((i, j) => ret[i][j].push({event: "took-damage", params: [[...this.loc], damage]}), 0, 0, 2, 2);
+        ret.addEvent("took-damage", [[...this.loc], damage]);
+        if (this.health <= 0) ret.concat(this.die(game));
         return ret;
     }
     die(game: GameState): Events {
-        const ret = emptyPArr<SocketEvent>();
-        doubleIt((i, j) => ret[i][j].push({event: "death", params: [[...this.loc]]}), 0, 0, 2, 2);
+        const ret = new Events();
+        //doubleIt((i, j) => ret[i][j].push({event: "death", params: [[...this.loc]]}), 0, 0, 2, 2);
+        ret.addEvent("death", [[...this.loc]]);
         return ret;
     }
     heal(game: GameState, amount: number): Events {
-        const ret = emptyPArr<SocketEvent>();
+        const ret = new Events();
         const healed = Math.min(amount, this.stats.maxHealth - this.health);
         // Add possible ability triggers here
         this.health += healed;
-        doubleIt((i, j)=>ret[i][j].push({event: "heal", params: [[...this.loc, amount]]},
-        {event: "stat-change", params: [[...this.loc, "health", healed]]}), 0, 0, 2, 2);
+        //doubleIt((i, j)=>ret[i][j].push({event: "heal", params: [[...this.loc], amount]},
+        //{event: "stat-change", params: [[...this.loc], "health", healed]}), 0, 0, 2, 2);
+        ret.addEvent("heal", [[...this.loc], amount]);
+        ret.addEvent("stat-change", [[...this.loc], "health", "change", healed]);
         return ret;
     }
     modifyStats(game: GameState, stat: keyof EntityStats, amount: number, modification: "set" | "change"): Events {
         // For now, only modifications to stats, and only numerical modifications, are permitted
-        const ret = emptyPArr<SocketEvent>();
+        const ret = new Events();
         if (typeof this.stats[stat] === "number") (this.stats[stat] as number) = amount + (modification === "change" ? (this.stats[stat] as number) : 0);
-        doubleIt((i, j) => ret[i][j].push({event: "stat-change", params: [[...this.loc], stat, modification, amount]}), 0, 0, 2, 2);
+        //doubleIt((i, j) => ret[i][j].push({event: "stat-change", params: [[...this.loc], stat, modification, amount]}), 0, 0, 2, 2);
+        ret.addEvent("stat-change", [[...this.loc], stat, modification, amount]);
         if (this.health > this.stats.maxHealth) {
             this.health = this.stats.maxHealth;
-            doubleIt((i, j) => ret[i][j].push({event: "stat-change", params: [[...this.loc], "health", "set", this.health]}), 0, 0, 2, 2);
+            //doubleIt((i, j) => ret[i][j].push({event: "stat-change", params: [[...this.loc], "health", "set", this.health]}), 0, 0, 2, 2);
+            ret.addEvent("stat-change", [[...this.loc], "health", "set", this.health]);
         }
         return ret;
     }
     // Activate active ability
     useActive(game: GameState, targets: {[key: string]: any}, index: number): Events {
-        const ret = emptyPArr<SocketEvent>();
+        const ret = new Events();
         if (!isIntInRange(index, 0, this.stats.actives.length - 1)) return ret; // Ability index invalid
         const ability = this.stats.actives[index];
         if (this.activeUses[index] < 1) return ret;
         if (!checkTargets(game, this.owner, this, ability.targets, targets)) return ret; // Given targets invalid
 
         this.activeUses[index]--;
-        doubleIt((i, j) => ret[i][j].push({event: "ability-use", params: [[...this.loc], index]}), 0, 0, 2, 2);
-        concatEvents(ret, doEffects(game, this.owner, targets, this, ...ability.effects));
+        //doubleIt((i, j) => ret[i][j].push({event: "ability-use", params: [[...this.loc], index]}), 0, 0, 2, 2);
+        ret.addEvent("ability-use", [[...this.loc], index]);
+        ret.concat(doEffects(game, this.owner, targets, this, ...ability.effects));
 
         return ret;
     }

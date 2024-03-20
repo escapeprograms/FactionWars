@@ -1,6 +1,6 @@
 import { CardType, Team, Coordinate, PlayerId, ClientGameState, Faction, PlayerArr, emptyPArr, SocketEvent, Events, PlayerStatus, PlayerInGame } from "./types.js";
 import { Building, BuildingStats, Unit, UnitStats, Card, Deck, cards, units, buildings } from "./types.js";
-import { concatEvents, arrEqual, deepCopy, doubleIt, isCoord, isIntInRange } from "./utility.js";
+import { arrEqual, deepCopy, doubleIt, isCoord, isIntInRange } from "./utility.js";
 import { socketTable } from "./users.js";
 
 export { GameState, Tile }; // Tile, Field
@@ -67,28 +67,31 @@ class GameState {
     // BuildingStats may be modified in the future!
     // Returns socket events for the building spawn
     spawnBuilding(building: BuildingStats, x:number, y:number, owner: PlayerId): Events {
-        const ret = emptyPArr<SocketEvent>();
+        const ret = new Events();
         // Verify placement
         if (this.verifyPlacement(building.size, x, y)) {
             doubleIt((i, j)=>this.field[i][j].occupy([x, y], "building"), x, y, x+building.size, y+building.size);
             this.getPlayer(owner).playerInfo.buildings.push([x, y]); // Assumes playerinfo is not null
             const b = new Building(this, [x, y], building, owner);
             this.buildings.push(b);
-            doubleIt((i, j) => ret[i][j].push({event: "building-spawn", params: [[...owner], [x, y], b]}), 0, 0, 2, 2);
+            //doubleIt((i, j) => ret[i][j].push({event: "building-spawn", params: [[...owner], [x, y], b]}), 0, 0, 2, 2);
+            ret.addEvent("building-spawn", [[...owner], [x, y], b]);
             // Attempt to activate building
-            concatEvents(ret, b.activate(this));
+            //concatEvents(ret, b.activate(this));
+            ret.concat(b.activate(this));
         }
         return ret;
     }
     // UnitStats may be modified in the future!
     spawnUnit(unit: UnitStats, x:number, y:number, owner: PlayerId): Events {
-        const ret = emptyPArr<SocketEvent>();
+        const ret = new Events();
         if (!this.field[x][y].occupant) {
             this.field[x][y].occupy([x, y], "unit");
             this.getPlayer(owner).playerInfo.units.push([x, y]);
             const u = new Unit(this, [x, y], unit, owner);
             this.units.push(u);
-            doubleIt((i, j) => ret[i][j].push({event: "unit-spawn", params: [[...owner], [x, y], u]}), 0, 0, 2, 2);
+            //doubleIt((i, j) => ret[i][j].push({event: "unit-spawn", params: [[...owner], [x, y], u]}), 0, 0, 2, 2);
+            ret.addEvent("unit-spawn", [[...owner], [x, y], u]);
         }
         return ret;
     }
@@ -106,32 +109,34 @@ class GameState {
         return valid;
     }
 
-    endTurn(): PlayerArr<SocketEvent[]> {
+    endTurn(): Events {
         /*// Clear timer
         clearTimeout(this.timerID);*/
 
-        const ret = emptyPArr<SocketEvent>();
-        doubleIt((i, j) => ret[i][j].push({event:"turn-end", params:[]}),0,0,2,2);
+        const ret = new Events();
+        //doubleIt((i, j) => ret[i][j].push({event:"turn-end", params:[]}),0,0,2,2);
+        ret.addEvent("end-turn");
 
         // Activate end of turn effects, as applicable
-        this.buildings.filter(b=>b.owner[0] === this.turn).forEach(b=>concatEvents(ret, b.endTurn(this)));
-        this.units.filter(b=>b.owner[0] === this.turn).forEach(u=>concatEvents(ret, u.endTurn(this)));
+        this.buildings.filter(b=>b.owner[0] === this.turn).forEach(b=>ret.concat(b.endTurn(this)));
+        this.units.filter(u=>u.owner[0] === this.turn).forEach(u=>ret.concat(u.endTurn(this)));
         this.turn = 1 - this.turn;
 
         return ret;
         // Turn start needs to be called separately
     }
 
-    startTurn(): PlayerArr<SocketEvent[]> {
-        const ret = emptyPArr<SocketEvent>();
-        doubleIt((i, j) => ret[i][j].push({event:"turn-start", params:[]}),0,0,2,2);
+    startTurn(): Events {
+        const ret = new Events();
+        //doubleIt((i, j) => ret[i][j].push({event:"turn-start", params:[]}),0,0,2,2);
+        ret.addEvent("turn-start");
 
         // Activate start of turn effects, as applicable
-        this.buildings.filter(b=>b.owner[0] === this.turn).forEach(b=>concatEvents(ret, b.startTurn(this)));
-        this.units.filter(b=>b.owner[0] === this.turn).forEach(u=>concatEvents(ret, u.startTurn(this)));
+        this.buildings.filter(b=>b.owner[0] === this.turn).forEach(b=>ret.concat(b.startTurn(this)));
+        this.units.filter(b=>b.owner[0] === this.turn).forEach(u=>ret.concat(u.startTurn(this)));
 
         // Players draw a card at the start of their turn
-        this.players[this.turn].forEach(p => concatEvents(ret, p.playerInfo.draw()));
+        this.players[this.turn].forEach(p => ret.concat(p.playerInfo.draw()));
 
         // This is the only "event" that is not sent to the client
         // Reset the team's turnEnd status
@@ -241,36 +246,36 @@ class GameState {
         return player && player.team === this.turn && player.playerInfo.active;
     }
 
-    move(player: PlayerId, unit: Coordinate, steps: Coordinate[]): PlayerArr<SocketEvent[]> {
+    move(player: PlayerId, unit: Coordinate, steps: Coordinate[]): Events {
         const p = this.getPlayer(player);
         const u = this.getUnit(unit);
-        if (!this.canAction(p)) return emptyPArr(); // Not a player or not their turn
-        if (!u || !arrEqual(u.owner, player)) return emptyPArr(); // Not a valid unit or not their unit
-        if (steps.some(s => !s.every(x => isIntInRange(x, 0, this.fieldSize - 1)))) return emptyPArr(); // Invalid coordinate
+        if (!this.canAction(p)) return new Events(); // Not a player or not their turn
+        if (!u || !arrEqual(u.owner, player)) return new Events(); // Not a valid unit or not their unit
+        if (steps.some(s => !s.every(x => isIntInRange(x, 0, this.fieldSize - 1)))) return new Events(); // Invalid coordinate
         return u.move(this, steps);
     }
 
     attack(player: PlayerId, source: Coordinate, target: Coordinate): Events {
         const p = this.getPlayer(player);
         const o = this.getOccupant(source);
-        if (!this.canAction(p)) return emptyPArr();
-        if (!o || !arrEqual(o.owner, player)) return emptyPArr();
-        if (arrEqual(source, target) || !target.every(x => isIntInRange(x, 0, this.fieldSize - 1))) return emptyPArr(); // Invalid target coordinate
+        if (!this.canAction(p)) return new Events();
+        if (!o || !arrEqual(o.owner, player)) return new Events();
+        if (arrEqual(source, target) || !target.every(x => isIntInRange(x, 0, this.fieldSize - 1))) return new Events(); // Invalid target coordinate
         return o.attack(this, target);
     }
 
     play(player: PlayerId, cardIndex: number, targets: {[key: string]: any}): Events {
         const p = this.getPlayer(player);
-        if (!this.canAction(p)) return emptyPArr();
-        if (!isIntInRange(cardIndex, 0, p.playerInfo.cards.length-1)) return emptyPArr();
+        if (!this.canAction(p)) return new Events();
+        if (!isIntInRange(cardIndex, 0, p.playerInfo.cards.length-1)) return new Events();
         return p.playerInfo.play(this, cardIndex, targets);
     }
 
     useActive(player: PlayerId, activator: Coordinate, index: number, targets: {[key: string]: any}): Events {
         const p = this.getPlayer(player);
         const a = this.getOccupant(activator);
-        if (!this.canAction(p)) return emptyPArr();
-        if (!a || !arrEqual(a.owner, player)) return emptyPArr();
+        if (!this.canAction(p)) return new Events();
+        if (!a || !arrEqual(a.owner, player)) return new Events();
         return a.useActive(this, targets, index);
     }
 }
