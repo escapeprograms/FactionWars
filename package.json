@@ -5,8 +5,9 @@
   "main": "Server/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc --build --verbose Client Server && cp Client/index.html build/Client",
-    "start": "node build/Server/index.js"
+    "build": "tsc --build --verbose Client Server && cp Client/index.html build/Client && cp -r Client/Assets build/Client",
+    "start": "node build/Server/index.js",
+    "restart": "npm run build && npm run start"
   },
   "author": "",
   "license": "ISC",
