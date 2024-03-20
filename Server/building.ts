@@ -1,5 +1,5 @@
 import { Coordinate, Faction, PlayerId, Unit, GameState, emptyPArr, PlayerArr, SocketEvent, Events, processData, EntityStats, JsonActiveAbility, Entity } from "./types.js";
-import { arrEqual, concatEvents, dist, doubleIt, getAdjTiles } from "./utility.js";
+import { arrEqual, dist, doubleIt, getAdjTiles } from "./utility.js";
 import { withinRadiusInBounds } from "../Client/functions.js";
 import b from "./../Client/buildings.json" assert { type: "json" };
 import { DEFAULT_BUILD_VALUE } from "../Client/constants.js";
@@ -65,14 +65,15 @@ class Building extends Entity {
         this.health = Math.ceil(this.stats.maxHealth / (this.stats.buildTime + 1)); // Buildings start with 1/(buildTime + 1) of their health
         // Note: Manual activation needed
     }
-    startTurn(game: GameState): PlayerArr<SocketEvent[]> {
+    startTurn(game: GameState): Events {
         const owner = game.getPlayer(this.owner).playerInfo;
-        const ret = emptyPArr<SocketEvent>();
+        const ret = new Events();
         // Generate, if active
         if(this.active) {
             if (this.stats.moneyGen !== 0) {
                 owner.money += this.stats.moneyGen;
-                doubleIt((i, j)=>ret[i][j].push({event: "change-money", params: [[...this.owner], this.stats.moneyGen]}), 0, 0, 2, 2);
+                //doubleIt((i, j)=>ret[i][j].push({event: "change-money", params: [[...this.owner], this.stats.moneyGen]}), 0, 0, 2, 2);
+                ret.addEvent("change-money", [[...this.owner], this.stats.moneyGen]);
             }
             super.startTurn(game);
             // Maybe other effects here
@@ -80,7 +81,7 @@ class Building extends Entity {
         return ret;
     }
     endTurn(game: GameState): Events {
-        const ret = emptyPArr<SocketEvent>();
+        const ret = new Events();
         // Decrement construction time
         if (this.buildLeft > 0) {
             let build = 0;
@@ -128,8 +129,9 @@ class Building extends Entity {
             this.health += healthInc;
             // Do we want to send all the build ticks or just enough so that it reaches 0?
             // Currently sending just enough so that it reaches 0
-            doubleIt((i, j) => ret[i][j].push({event: "build-tick", params: [[...this.loc], build, healthInc]}), 0, 0, 2, 2);
-            if (this.buildLeft === 0) concatEvents(ret, this.activate(game));
+            //doubleIt((i, j) => ret[i][j].push({event: "build-tick", params: [[...this.loc], build, healthInc]}), 0, 0, 2, 2);
+            ret.addEvent("build-tick", [[...this.loc], build, healthInc]);
+            if (this.buildLeft === 0) ret.concat(this.activate(game));
         }
         // Maybe more stuff here, such as end of turn effects, as applicable
         return ret;
@@ -138,39 +140,45 @@ class Building extends Entity {
     // Pass in owner's PlayerInfo
     activate(game: GameState): Events {
         const owner = game.getPlayer(this.owner).playerInfo;
-        const ret = emptyPArr<SocketEvent>();
+        const ret = new Events();
         if (!this.active && this.buildLeft === 0 && this.stats.upkeep <= owner.energy) {
             owner.energy += this.stats.energyGen - this.stats.upkeep;
             owner.totalEnergy += this.stats.energyGen;
             this.active = true;
-            doubleIt((i, j)=>ret[i][j].push(
+            /*doubleIt((i, j)=>ret[i][j].push(
                 {event: "building-activated", params: [[...this.loc]]},
                 {event: "change-energy", params: [[...this.owner], -this.stats.upkeep]},
                 {event: "change-tot-energy", params: [[...this.owner], this.stats.energyGen]}
-            ), 0, 0, 2, 2);
+            ), 0, 0, 2, 2);*/
+            ret.addEvent("building-activated", [[...this.loc]]);
+            ret.addEvent("change-energy", [[...this.owner], -this.stats.upkeep]);
+            ret.addEvent("change-tot-energy", [[...this.owner], this.stats.energyGen]);
         }
         return ret;
     }
     deactivate(game: GameState): Events {
-        const ret = emptyPArr<SocketEvent>();
+        const ret = new Events();
         if (this.active) {
             const owner = game.getPlayer(this.owner).playerInfo;
             owner.energy -= this.stats.energyGen - this.stats.upkeep;
             owner.totalEnergy -= this.stats.energyGen;
             this.active = false;
-            doubleIt((i, j)=>ret[i][j].push(
+            /*doubleIt((i, j)=>ret[i][j].push(
                 {event: "building-deactivated", params: [[...this.loc]]},
                 {event: "change-energy", params: [[...this.owner], this.stats.upkeep]},
                 {event: "change-tot-energy", params: [[...this.owner], -this.stats.energyGen]}
-            ), 0, 0, 2, 2);
+            ), 0, 0, 2, 2);*/
+            ret.addEvent("building-deactivated", [[...this.loc]]);
+            ret.addEvent("change-energy", [[...this.owner], this.stats.upkeep]);
+            ret.addEvent("change-tot-energy", [[...this.owner], -this.stats.energyGen]);
         }
         return ret;
     }
     attack(game: GameState, target: Coordinate): Events {
-        return this.active ? super.attack(game, target) : emptyPArr();
+        return this.active ? super.attack(game, target) : new Events();
     }
     die(game: GameState): Events {
-        const ret = emptyPArr<SocketEvent>();
+        const ret = new Events();
         const owner = game.getPlayer(this.owner);
         // Eventually, implement on death effects (if any)
         // Remove from building list
@@ -185,17 +193,19 @@ class Building extends Entity {
         // Remove from tiles
         doubleIt((i, j) => game.field[i][j].leave(), this.loc[0], this.loc[1], this.loc[0] + this.stats.size, this.loc[1] + this.stats.size);
         // Deactivate as this is no longer producing energy
-        concatEvents(ret, this.deactivate(game));
-        concatEvents(ret, owner.playerInfo.upkeep(game));
+        ret.concat(this.deactivate(game));
+        ret.concat(owner.playerInfo.upkeep(game));
         // Return events
-        concatEvents(ret, super.die(game));
+        ret.concat(super.die(game));
         // Possible Headquarters destruction
         if (this.stats.name === "Headquarters") {
             owner.playerInfo.active = false;
-            doubleIt((i, j) => ret[i][j].push({event: "hq-death", params: [[...this.owner]]}), 0, 0, 2, 2);
+            //doubleIt((i, j) => ret[i][j].push({event: "hq-death", params: [[...this.owner]]}), 0, 0, 2, 2);
+            ret.addEvent("hq-death", [[...this.owner]]);
             // Possible game end
             if (!game.getPlayer([owner.team, 1 - owner.playerInfo.self[1]]).playerInfo.active) {
-                doubleIt((i, j) => ret[i][j].push({event: "game-end", params: [1 - owner.team]}), 0, 0, 2, 2);
+                //doubleIt((i, j) => ret[i][j].push({event: "game-end", params: [1 - owner.team]}), 0, 0, 2, 2);
+                ret.addEvent("game-end", [1 - owner.team]);
                 game.active = false;
                 game.onGameEnd();
             }

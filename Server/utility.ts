@@ -20,10 +20,10 @@ export function arrEqual<T>(c1: T[], c2: T[]) {
     return c1.length === c2.length && c1.every((e, i)=>e === c2[i]);
 }
 
-// Modifies e1 in place by appending events from e2 to e1
+/*// Modifies e1 in place by appending events from e2 to e1
 export function concatEvents(e1: Events, e2: Events) {
     doubleIt((i, j)=>e1[i][j].push(...e2[i][j]), 0, 0, 2, 2);
-}
+}*/
 
 // Makes a deep copy of objects and primitives
 // Does not work witih functions and symbols

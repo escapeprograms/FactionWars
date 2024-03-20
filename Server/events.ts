@@ -2,14 +2,14 @@ import { GameState, PlayerArr, PlayerId, SocketEvent, emptyPArr } from "./types.
 import { doubleIt } from "./utility.js";
 import {Socket} from "socket.io";
 
-class Events {
+export class Events {
     private events: PlayerArr<SocketEvent[]> = emptyPArr<SocketEvent>();
     private log: SocketEvent[] = [];
     constructor() {
         // For now, assume 2 teams and 2 players per team
     }
     // whiteList is an array of players that receive the event. If undefined it is all players
-    addEvent(event: string, params: any[], whiteList?: PlayerId[]) {
+    addEvent(event: string, params: any[] = [], whiteList?: PlayerId[]) {
         if (whiteList) {
             whiteList.forEach(p => this.events[p[0]][p[1]].push({event, params}));
         } else {
