@@ -355,7 +355,8 @@ socket.on("game-start", (data: any) => {
                 elem.id = "" + i + "-" + j + "-" + s;
                 let text = document.createTextNode(s + ": ");
                 elem.appendChild(text);
-                text = document.createTextNode(data.players[i][j].playerInfo[s]);
+                const info = data.players[i][j].playerInfo[s]
+                text = document.createTextNode((s === "cards" && Array.isArray(info)) ? info.map(c=>c.name).join(", ") : info);
                 elem.appendChild(text);
                 div.appendChild(elem);
             });
@@ -371,8 +372,8 @@ let fullTimer: NodeJS.Timeout;
 let smallTimer: NodeJS.Timeout;
 socket.on("turn-start", ()=>{
     console.log("Received 'turn-start'");
-    const timer_length = TURN_LENGTH - 500;
     const currTime = new Date();
+    const timer_length = TURN_LENGTH - 500;
     const endTime = currTime.setMilliseconds(currTime.getMilliseconds() + timer_length);
     console.log("Setting timer for " + timer_length + " milliseconds");
     fullTimer = setTimeout(()=>console.log("Time's up!"), timer_length); // A bit of leeway just in case
@@ -395,10 +396,17 @@ function getStatNode(playerId: any, statName: string) {
 const format = (playerId: [number, number]) => "["+playerId[0]+","+playerId[1]+"]";
 socket.on("card-drawn", (playerId: any, card?: any)=> {
     console.log(format(playerId) + " has drawn a card."); 
-    if (card) console.log(card);// To be implemented
+    if (card) {
+        console.log(card);// To be implemented
+        const temp = getStatNode(playerId, "cards")!;
+        if (typeof temp.textContent === "string" && temp.textContent !== "") temp.textContent += ", ";
+        temp.textContent += card.name;
+        gameState.players[playerId[0]][playerId[1]].playerInfo.cards.push(card);
+    }
     else {
         const temp = getStatNode(playerId, "cards")!;
         temp.textContent = (1 + Number(temp.textContent!)) as any as string;
+        gameState.players[playerId[0]][playerId[1]].playerInfo.cards++;
     }
 });
 socket.on("change-money", (playerId: any, amount: number)=>{
