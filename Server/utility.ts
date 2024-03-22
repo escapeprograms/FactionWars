@@ -28,8 +28,12 @@ export function concatEvents(e1: Events, e2: Events) {
 // Makes a deep copy of objects and primitives
 // Does not work witih functions and symbols
 // DOES NOT WORK WITH CIRCULAR REFERENCES!!!
-export function deepCopy<T>(obj: T): T {
+export function deepCopy<U>(obj: U[]): U[];
+export function deepCopy<T>(obj: T): T;
+export function deepCopy<U, T>(obj: T | U[]): T | U[] {
+    if (Array.isArray(obj)) return obj.map(x => deepCopy(x));
     if (typeof obj === "object") {
+        
         const copy = {...obj};
         for (let key in copy) {
             if (typeof copy[key] === "object") {
