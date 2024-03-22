@@ -282,6 +282,7 @@ socket.on("new-join", ({clientId, name, faction, team}: PlayerData) => {
     updateUI();
 });
 
+// Also new stuff
 let gameState: any;
 function updateTile(x: number, y: number) {
     const tile = document.getElementById("["+x+","+y+"]");
@@ -292,12 +293,13 @@ function updateTile(x: number, y: number) {
     (tile.firstChild as HTMLImageElement).src = "./Assets/" + (gameState.field[x][y].occupant ? (gameState.field[x][y].occupantType == "unit" ? "unknown_unit": "unknown_building" ) : "temp-grass") + ".png";
 }
 
+let self: [number, number];
+// End also new stuff
 socket.on("game-start", (data: any) => {
     console.log("Received 'game-start'!");
     console.log(data);
     gameState = data;
     // Testing code here
-
     data.getPlayer = (c: any) => data.players[c[0]][c[1]];
     // Oh no, code duplication!?!
     data.getTile = (c: any) => {
@@ -347,6 +349,7 @@ socket.on("game-start", (data: any) => {
     let stats = ["money", "energy", "cards"];
     for (let i = 0; i < 2; i++) {
         for (let j = 0; j < 2; j++) {
+            if (data.players[i][j].id === socket.id) self = [i, j];
             const div = document.getElementById("" + i + "-" + j)!;
             let text=  document.createTextNode("Player"+"["+i+","+j+"]");
             div.appendChild(text);
@@ -399,9 +402,8 @@ socket.on("card-drawn", (playerId: any, card?: any)=> {
     if (card) {
         console.log(card);// To be implemented
         const temp = getStatNode(playerId, "cards")!;
-        if (typeof temp.textContent === "string" && temp.textContent !== "") temp.textContent += ", ";
-        temp.textContent += card.name;
         gameState.players[playerId[0]][playerId[1]].playerInfo.cards.push(card);
+        temp.textContent = gameState.players[playerId[0]][playerId[1]].playerInfo.cards.map((c: any)=>c.name).join(", ");
     }
     else {
         const temp = getStatNode(playerId, "cards")!;
@@ -425,6 +427,18 @@ socket.on("move", (prevloc: any, newloc: any)=> {
     updateTile(prevloc[0], prevloc[1]);
     updateTile(newloc[0], newloc[1]);
 })
+socket.on("card-discarded", (playerId: any, index: number) => {
+    console.log(format(playerId) + "has discarded the card at index", index);
+    if (playerId[0] !== self[0] || playerId[1] !== self[1]) {
+        const temp = getStatNode(playerId, "cards")!;
+        temp.textContent = (Number(temp.textContent!) - 1) as any as string;
+        gameState.players[playerId[0]][playerId[1]].playerInfo.cards--;
+    } else {
+        const temp = getStatNode(playerId, "cards")!;
+        gameState.players[playerId[0]][playerId[1]].playerInfo.cards.splice(index, 1);
+        temp.textContent = gameState.players[playerId[0]][playerId[1]].playerInfo.cards.map((c: any)=>c.name).join(", ");
+    }
+});
 // End new test code
 
 socket.on("player-left-lobby", (id: string) => {

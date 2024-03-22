@@ -32,7 +32,9 @@
         </div>
     </div>
     <!-- End new code added for testing -->
-    <script src="main.js" type="module">import {socket} from "main.js"; window.test = socket;</script>
-    <!--In console, type: const m = await import('./main.js'); const socket = m.socket; -->
+    <script src="main.js" type="module"></script>
+    <!--In console, type: const m = await import('./main.js'); const socket = m.socket; 
+        socket.emit("play", 0, {"loc": [3, 2]})
+    -->
 </body>
 </html>
