@@ -3,6 +3,65 @@ Things to Do, Amongst Others
  - Figure out how to identify sockets. Socket.id is ephemeral, so we shouldn't really use that.
    Edit creation of users after we figure that out.
     - Or maybe it's fine? It's just that refreshing will disconnect.
- - Add game logic and apply proper changes to "disconnect" event
- - Test the new code
- - When buildings are activated/disactivated, check for reactivation?
+ - When buildings are activated/disactivated, should be automatically reactivate buildings?
+    - Perhaps, for now, try to reactivate at the start or end of each turn?
+
+Things to Do Later
+ - Figure out scaling & aspect ratios for canvas front end?
+ - (Fog of war can do w/ tiles tracking # of viewers) 
+ - (Talk about invisiblity detection? Identifiers? But client should not know which unit is which)
+ - (If an invisible unit kills the detecting unit right after it gets detected, the unit is not detected)
+ - (Should invisible units reveal themselves when they attack/get attacked)
+ - Combine building activate and deactivate events? Combine change money/energy/tot-energy events? Combine turn start/end?
+ - Consider converting some object tables into maps
+ - Potentially make buildings array a Map? But will have to transform when sending in json
+ - Passive abilities and attributes (and defaults for those)
+ - Orbital Laser
+ - Faction icons?
+ - Terrain
+ - Attack target discrimination (different attack effects depending on Unit vs Building)
+ - Add onDeath() trigger for Entities
+
+Things to Discuss
+ - Do we want to send all the build ticks or just enough so that it reaches 0? (for Buildings)
+ - Should newly activated buildings be able to attack and/or produce immediately? 
+   (Doesn't matter for end of turn building construction, but does for immediate construction and other activation methods)
+ - Make Events a class instead of a type? Have methods for appending Events, sending Events
+
+Things to Playtest
+ - Unit spawn location
+ - Card costs
+ - Building production
+ - Unit speed
+ - Unit and Building stats & balancing
+ - Card draw: Right now, moneyGen can grow a lot, potentially infinitely, so card draw might fall behind?
+
+Things to Test
+ - Card use / playing cards (unit, building, operation)
+ - Unit & Building attack + death + takeDamage + die
+ - End of game (HQ destruction, gameEnd state)
+ - End of game (gameEnd state into lobby/menu), attempting to start a game with players still in gameEnd
+ - Active ability activation
+ - Disconnections (in game state and gameEnd state)
+
+Things to Do Now
+ - Implement HQ's Industrial Might active ability
+ - Add a damaging neutral operation?
+ - Add engineer passive (builds double ticks)
+
+ Orbital Laser (Figure out faction. Puts a linked Orbital Strike in your deck. Orbital strike does splash (radius=0.5), can target anywhere,
+    medium damage. Do linked cards.)
+ Engineer passive: Builds double ticks
+ Corridor (Building): 1 tile. Either vertical or horizontal. A unit that enters it from one opening ends up at the other,
+    effectively moving 2 spaces with 1 move. Entrance from non-openings not permitted.
+
+ Possible idea: Buildings and units have "stealth" and "detection" stats? Stealth - detection is range at which entity can be detected at,
+    with 0 or negative meaning they must attempt to share tiles to be detected (not sure how to implement though)
+ Change events into class
+ Make game log code (once games start, events are also recorded in a json file -- an array of event objects)
+
+ Movement does not work for multi-tile entities
+
+ Maybe change timer to after events are sent???
+
+ Figure out card-playing
